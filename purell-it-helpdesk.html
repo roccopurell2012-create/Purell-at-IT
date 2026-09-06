@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Purell Family IT Help Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#14213D;
+    --paper:#F7F7F5;
+    --surface:#FFFFFF;
+    --steel:#5C6B7A;
+    --steel-soft:#E4E7EA;
+    --accent:#B08D57;
+    --accent-soft:#F1E9DB;
+    --queued:#8A94A0;
+    --progress:#B08D57;
+    --waiting:#C97B3D;
+    --finished:#2F6F52;
+    --line:#E1E2DE;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'IBM Plex Sans',sans-serif;background:var(--paper);color:var(--ink);}
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  /* ---------- Landing ---------- */
+  #landing{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;}
+  .landing-card{max-width:440px;width:100%;text-align:left;}
+  .brand{font-family:'Source Serif 4',serif;font-weight:600;font-size:30px;letter-spacing:-0.01em;margin:0 0 6px;}
+  .brand-sub{color:var(--steel);font-size:15px;margin:0 0 36px;line-height:1.5;}
+  .role-btn{display:block;width:100%;text-align:left;padding:18px 20px;margin-bottom:12px;background:var(--surface);border:1px solid var(--line);border-radius:4px;cursor:pointer;transition:border-color .15s ease;}
+  .role-btn:hover{border-color:var(--ink);}
+  .role-btn .role-title{font-size:16px;font-weight:600;margin-bottom:3px;}
+  .role-btn .role-desc{font-size:13px;color:var(--steel);}
+
+  /* ---------- App shell ---------- */
+  #app{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:220px;flex-shrink:0;background:var(--ink);color:#fff;padding:28px 0;display:flex;flex-direction:column;}
+  .sidebar .brand-mark{font-family:'Source Serif 4',serif;font-size:19px;font-weight:600;padding:0 24px 26px;border-bottom:1px solid rgba(255,255,255,0.14);margin-bottom:14px;}
+  .sidebar .brand-mark small{display:block;font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:400;color:rgba(255,255,255,0.55);margin-top:4px;letter-spacing:.02em;}
+  .nav-item{padding:11px 24px;font-size:14px;cursor:pointer;color:rgba(255,255,255,0.72);border-left:3px solid transparent;}
+  .nav-item:hover{color:#fff;}
+  .nav-item.active{color:#fff;border-left-color:var(--accent);background:rgba(255,255,255,0.05);font-weight:500;}
+  .sidebar-foot{margin-top:auto;padding:14px 24px 0;border-top:1px solid rgba(255,255,255,0.14);}
+  .sidebar-foot .who{font-size:12.5px;color:rgba(255,255,255,0.55);margin-bottom:8px;line-height:1.4;}
+  .switch-link{font-size:12.5px;color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;}
+
+  .main{flex:1;padding:40px 48px;max-width:820px;}
+  .page-title{font-family:'Source Serif 4',serif;font-size:26px;font-weight:600;margin:0 0 6px;}
+  .page-sub{color:var(--steel);font-size:14px;margin:0 0 32px;max-width:60ch;line-height:1.55;}
+
+  /* ---------- Forms ---------- */
+  .field-row{display:flex;gap:16px;margin-bottom:16px;}
+  .field{flex:1;margin-bottom:16px;}
+  .field label{display:block;font-size:13px;font-weight:500;margin-bottom:6px;}
+  .field input,.field select,.field textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:4px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--ink);}
+  .field textarea{resize:vertical;min-height:100px;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:2px solid var(--ink);outline-offset:1px;}
+  .primary-btn{background:var(--ink);color:#fff;border:none;padding:12px 22px;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;}
+  .primary-btn:hover{background:#0d1730;}
+  .ghost-btn{background:transparent;color:var(--ink);border:1px solid var(--line);padding:12px 22px;border-radius:4px;font-size:14px;font-weight:500;cursor:pointer;}
+  .form-msg{margin-top:14px;font-size:13.5px;padding:10px 14px;border-radius:4px;display:none;}
+  .form-msg.ok{background:#E7F1EB;color:var(--finished);display:block;}
+
+  /* ---------- Ticket rows ---------- */
+  .ticket-row{display:flex;align-items:center;gap:16px;padding:16px 18px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--queued);border-radius:4px;margin-bottom:10px;}
+  .ticket-row.status-progress{border-left-color:var(--progress);}
+  .ticket-row.status-waiting{border-left-color:var(--waiting);}
+  .ticket-row.status-finished{border-left-color:var(--finished);}
+  .ticket-main{flex:1;min-width:0;}
+  .ticket-top{display:flex;gap:10px;align-items:baseline;margin-bottom:3px;}
+  .ticket-cat{font-weight:600;font-size:14.5px;}
+  .ticket-meta{font-size:12.5px;color:var(--steel);}
+  .ticket-desc{font-size:13.5px;color:var(--steel);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+  .status-pill{font-size:12px;font-weight:500;padding:5px 11px;border-radius:20px;white-space:nowrap;}
+  .status-pill.status-queued{background:var(--steel-soft);color:var(--steel);}
+  .status-pill.status-progress{background:var(--accent-soft);color:var(--accent);}
+  .status-pill.status-waiting{background:#F7E7DA;color:var(--waiting);}
+  .status-pill.status-finished{background:#E7F1EB;color:var(--finished);}
+  .status-select{border:1px solid var(--line);border-radius:20px;font-size:12px;padding:5px 10px;background:var(--surface);color:var(--ink);}
+  .empty-state{color:var(--steel);font-size:14px;padding:28px 0;border-top:1px solid var(--line);}
+
+  /* ---------- General fixes ---------- */
+  .fix-item{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:18px 20px;margin-bottom:12px;}
+  .fix-item summary{font-weight:600;font-size:15px;cursor:pointer;list-style:none;}
+  .fix-item summary::-webkit-details-marker{display:none;}
+  .fix-item summary::before{content:'+';display:inline-block;width:16px;color:var(--accent);font-weight:600;}
+  .fix-item[open] summary::before{content:'\2212';}
+  .fix-item p{font-size:13.5px;color:var(--steel);line-height:1.6;margin:12px 0 0 16px;}
+
+  /* ---------- Admin gate ---------- */
+  .pin-box{max-width:280px;}
+
+  @media (max-width:720px){
+    .shell{flex-direction:column;}
+    .sidebar{width:100%;flex-direction:row;overflow-x:auto;padding:16px 0;align-items:center;}
+    .sidebar .brand-mark{display:none;}
+    .nav-item{border-left:none;border-bottom:3px solid transparent;white-space:nowrap;}
+    .nav-item.active{border-left:none;border-bottom-color:var(--accent);}
+    .sidebar-foot{display:none;}
+    .main{padding:28px 20px;}
+    .field-row{flex-direction:column;gap:0;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LANDING -->
+<div id="landing">
+  <div class="landing-card">
+    <p class="brand">Purell Family IT Help Desk</p>
+    <p class="brand-sub">Log a problem, check on it, or fix it yourself in a couple of minutes.</p>
+    <div class="role-btn" onclick="enterUser()">
+      <div class="role-title">I need help with something</div>
+      <div class="role-desc">Submit a ticket, track it, or browse quick fixes</div>
+    </div>
+    <div class="role-btn" onclick="showPinGate()">
+      <div class="role-title">IT staff</div>
+      <div class="role-desc">Manage incoming tickets</div>
+    </div>
+    <div id="pinGate" style="display:none;margin-top:18px;">
+      <div class="field pin-box">
+        <label>Staff PIN</label>
+        <input type="password" id="pinInput" placeholder="Enter PIN">
+      </div>
+      <button class="primary-btn" onclick="enterAdmin()">Continue</button>
+      <p id="pinError" style="color:var(--waiting);font-size:13px;margin-top:10px;display:none;">That PIN isn't right.</p>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="shell">
+    <div class="sidebar">
+      <div class="brand-mark">Purell IT<small>Help Desk</small></div>
+      <div id="userNav">
+        <div class="nav-item active" data-view="submit">Submit a ticket</div>
+        <div class="nav-item" data-view="mytickets">My tickets</div>
+        <div class="nav-item" data-view="fixes">Quick fixes</div>
+      </div>
+      <div id="adminNav" style="display:none;">
+        <div class="nav-item active" data-view="alltickets">All tickets</div>
+        <div class="nav-item" data-view="settings">Settings</div>
+      </div>
+      <div class="sidebar-foot">
+        <div class="who" id="whoLabel"></div>
+        <span class="switch-link" onclick="goHome()">Switch view</span>
+      </div>
+    </div>
+
+    <div class="main">
+
+      <!-- Submit a ticket -->
+      <div class="view" id="view-submit">
+        <h1 class="page-title">Submit a ticket</h1>
+        <p class="page-sub">Tell us what's going on and we'll take it from here. You'll be able to check the status any time under "My tickets" using the same name and contact.</p>
+        <div class="field-row">
+          <div class="field"><label>Your name</label><input id="f-name" type="text" placeholder="Jane Purell"></div>
+          <div class="field"><label>Email or phone</label><input id="f-contact" type="text" placeholder="jane@email.com"></div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>Category</label>
+            <select id="f-category">
+              <option>Wi-Fi / Internet</option>
+              <option>Computer running slow</option>
+              <option>Printer</option>
+              <option>Email</option>
+              <option>App or software issue</option>
+              <option>Display or sound</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Urgency</label>
+            <select id="f-urgency">
+              <option>Low — whenever you get a chance</option>
+              <option selected>Normal</option>
+              <option>High — I'm stuck</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>What's happening?</label>
+          <textarea id="f-desc" placeholder="Describe the problem, when it started, and anything you've already tried."></textarea>
+        </div>
+        <button class="primary-btn" onclick="submitTicket()">Submit ticket</button>
+        <div class="form-msg" id="submitMsg"></div>
+      </div>
+
+      <!-- My tickets -->
+      <div class="view" id="view-mytickets" style="display:none;">
+        <h1 class="page-title">My tickets</h1>
+        <p class="page-sub">Enter the name and contact you used when submitting, to see their status.</p>
+        <div class="field-row">
+          <div class="field"><label>Your name</label><input id="lookup-name" type="text"></div>
+          <div class="field"><label>Email or phone</label><input id="lookup-contact" type="text"></div>
+        </div>
+        <button class="ghost-btn" onclick="lookupTickets()">Show my tickets</button>
+        <div id="myTicketsList" style="margin-top:24px;"></div>
+      </div>
+
+      <!-- Quick fixes -->
+      <div class="view" id="view-fixes" style="display:none;">
+        <h1 class="page-title">Quick fixes</h1>
+        <p class="page-sub">Common issues you can often solve yourself in a couple of minutes.</p>
+        <div id="fixesList"></div>
+      </div>
+
+      <!-- Admin: all tickets -->
+      <div class="view" id="view-alltickets" style="display:none;">
+        <h1 class="page-title">All tickets</h1>
+        <p class="page-sub">Update a ticket's status as you work through it.</p>
+        <div id="allTicketsList"></div>
+      </div>
+
+      <!-- Admin: settings -->
+      <div class="view" id="view-settings" style="display:none;">
+        <h1 class="page-title">Settings</h1>
+        <p class="page-sub">Connect email notifications and set the staff PIN. These are saved for everyone who uses this site.</p>
+        <div class="field"><label>EmailJS Service ID</label><input id="s-service" type="text"></div>
+        <div class="field"><label>EmailJS Template ID</label><input id="s-template" type="text"></div>
+        <div class="field"><label>EmailJS Public Key</label><input id="s-public" type="text"></div>
+        <div class="field"><label>Notify this email on new tickets</label><input id="s-notify" type="text"></div>
+        <div class="field" style="max-width:200px;"><label>Staff PIN</label><input id="s-pin" type="text" placeholder="1234"></div>
+        <button class="primary-btn" onclick="saveSettings()">Save settings</button>
+        <div class="form-msg" id="settingsMsg"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+let SETTINGS = { serviceId:'', templateId:'', publicKey:'', notifyEmail:'', adminPin:'1234' };
+let CURRENT_ROLE = null;
+
+const FIXES = [
+  ["Wi-Fi keeps dropping","Restart the router by unplugging it for 10 seconds. On your device, forget the network and reconnect with the password. If it still drops, move closer to the router — thick walls and microwaves both interfere with the signal."],
+  ["Computer running slow","Restart it fully rather than just closing the lid — this clears memory that builds up over days. Check how many programs open automatically on startup and disable ones you don't need daily. Free up space if the drive is nearly full, since that alone slows things down."],
+  ["Printer won't print","Check it's powered on and connected to the same Wi-Fi network as your computer. Clear the print queue if a stuck job is blocking new ones. Reprint a small test page before trying the full document again."],
+  ["No internet at all","Check the modem and router both have solid, non-blinking lights. Restart both, starting with the modem and waiting a minute before turning the router back on. If a phone on mobile data also has no signal, the outage may be with the provider rather than your setup."],
+  ["Email not syncing","Confirm you have an internet connection first, since that's the most common cause. Log out of the email account on that device and log back in. Check you haven't hit a storage limit on the account, which can quietly stop new mail from arriving."],
+  ["An app keeps crashing","Close the app fully and reopen it. Check the app store for a pending update, since crashes are often fixed in the next release. If it still crashes, uninstalling and reinstalling clears out any corrupted files."],
+  ["No picture on the screen","Check all cables are firmly connected at both ends. Try a different cable or port if one's available, since cables are a common point of failure. If it's a monitor, confirm it's set to the right input source."],
+  ["No sound","Check the volume isn't muted and is turned up, both in the app and in the system volume. Confirm the correct output device is selected, especially if headphones or speakers were recently connected. Restarting the device clears most audio driver hiccups."]
+];
+
+function renderFixes(){
+  const el = document.getElementById('fixesList');
+  el.innerHTML = FIXES.map(f => `<details class="fix-item"><summary>${f[0]}</summary><p>${f[1]}</p></details>`).join('');
+}
+
+function loadSettings(){
+  window.storage.get('settings', true).then(r=>{
+    if(r && r.value){ SETTINGS = JSON.parse(r.value); }
+  }).catch(()=>{});
+}
+
+function showPinGate(){ document.getElementById('pinGate').style.display='block'; }
+
+function enterAdmin(){
+  const pin = document.getElementById('pinInput').value.trim();
+  if(pin === (SETTINGS.adminPin || '1234')){
+    CURRENT_ROLE = 'admin';
+    startApp();
+  } else {
+    document.getElementById('pinError').style.display='block';
+  }
+}
+
+function enterUser(){ CURRENT_ROLE = 'user'; startApp(); }
+
+function goHome(){
+  document.getElementById('app').style.display='none';
+  document.getElementById('landing').style.display='flex';
+  document.getElementById('pinGate').style.display='none';
+  document.getElementById('pinInput').value='';
+  document.getElementById('pinError').style.display='none';
+}
+
+function startApp(){
+  document.getElementById('landing').style.display='none';
+  document.getElementById('app').style.display='block';
+  const userNav = document.getElementById('userNav');
+  const adminNav = document.getElementById('adminNav');
+  const whoLabel = document.getElementById('whoLabel');
+  if(CURRENT_ROLE === 'admin'){
+    userNav.style.display='none';
+    adminNav.style.display='block';
+    whoLabel.textContent = 'Signed in as IT staff';
+    switchView('alltickets');
+    renderAllTickets();
+    document.getElementById('s-service').value = SETTINGS.serviceId||'';
+    document.getElementById('s-template').value = SETTINGS.templateId||'';
+    document.getElementById('s-public').value = SETTINGS.publicKey||'';
+    document.getElementById('s-notify').value = SETTINGS.notifyEmail||'';
+    document.getElementById('s-pin').value = SETTINGS.adminPin||'1234';
+  } else {
+    userNav.style.display='block';
+    adminNav.style.display='none';
+    whoLabel.textContent = 'Family member view';
+    switchView('submit');
+  }
+  renderFixes();
+  document.querySelectorAll('.nav-item').forEach(item=>{
+    item.onclick = ()=> switchView(item.dataset.view);
+  });
+}
+
+function switchView(name){
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  document.getElementById('view-'+name).style.display='block';
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    n.classList.toggle('active', n.dataset.view === name);
+  });
+  if(name === 'alltickets') renderAllTickets();
+}
+
+function getTickets(){
+  return window.storage.get('tickets', true).then(r=>{
+    return r && r.value ? JSON.parse(r.value) : [];
+  }).catch(()=>[]);
+}
+
+function saveTickets(list){
+  return window.storage.set('tickets', JSON.stringify(list), true);
+}
+
+function submitTicket(){
+  const name = document.getElementById('f-name').value.trim();
+  const contact = document.getElementById('f-contact').value.trim();
+  const category = document.getElementById('f-category').value;
+  const urgency = document.getElementById('f-urgency').value;
+  const description = document.getElementById('f-desc').value.trim();
+  const msg = document.getElementById('submitMsg');
+  if(!name || !contact || !description){
+    msg.textContent = 'Please fill in your name, contact, and a description before submitting.';
+    msg.className = 'form-msg ok';
+    msg.style.background = '#F7E7DA'; msg.style.color = 'var(--waiting)';
+    msg.style.display = 'block';
+    return;
+  }
+  const ticket = {
+    id: Date.now().toString(36),
+    name, contact, category, urgency, description,
+    status: 'queued',
+    submitted: new Date().toLocaleString()
+  };
+  getTickets().then(list=>{
+    list.unshift(ticket);
+    return saveTickets(list);
+  }).then(()=>{
+    msg.style.background = '#E7F1EB'; msg.style.color = 'var(--finished)';
+    msg.textContent = "Ticket submitted. You can check its status any time under \"My tickets.\"";
+    msg.style.display = 'block';
+    document.getElementById('f-desc').value = '';
+    sendTicketEmail(ticket);
+  });
+}
+
+function sendTicketEmail(ticket){
+  if(!SETTINGS.serviceId || !SETTINGS.templateId || !SETTINGS.publicKey) return;
+  fetch('https://api.emailjs.com/api/v1.0/email/send', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({
+      service_id: SETTINGS.serviceId,
+      template_id: SETTINGS.templateId,
+      user_id: SETTINGS.publicKey,
+      template_params: {
+        from_name: ticket.name,
+        contact: ticket.contact,
+        category: ticket.category,
+        urgency: ticket.urgency,
+        description: ticket.description,
+        type: 'New ticket',
+        submitted: ticket.submitted,
+        to_email: SETTINGS.notifyEmail || ''
+      }
+    })
+  }).catch(()=>{});
+}
+
+function lookupTickets(){
+  const name = document.getElementById('lookup-name').value.trim().toLowerCase();
+  const contact = document.getElementById('lookup-contact').value.trim().toLowerCase();
+  const el = document.getElementById('myTicketsList');
+  getTickets().then(list=>{
+    const mine = list.filter(t => t.name.toLowerCase()===name && t.contact.toLowerCase()===contact);
+    if(mine.length===0){
+      el.innerHTML = '<div class="empty-state">No tickets found for that name and contact. Double check they match exactly what you submitted with.</div>';
+      return;
+    }
+    el.innerHTML = mine.map(renderTicketRow(false)).join('');
+  });
+}
+
+function statusLabel(s){
+  return {queued:'Queued', progress:'In progress', waiting:'Waiting on you', finished:'Finished'}[s] || 'Queued';
+}
+
+function renderTicketRow(editable){
+  return function(t){
+    const statusControl = editable
+      ? `<select class="status-select" onchange="updateStatus('${t.id}', this.value)">
+          <option value="queued" ${t.status==='queued'?'selected':''}>Queued</option>
+          <option value="progress" ${t.status==='progress'?'selected':''}>In progress</option>
+          <option value="waiting" ${t.status==='waiting'?'selected':''}>Waiting on you</option>
+          <option value="finished" ${t.status==='finished'?'selected':''}>Finished</option>
+        </select>`
+      : `<span class="status-pill status-${t.status}">${statusLabel(t.status)}</span>`;
+    return `<div class="ticket-row status-${t.status}">
+      <div class="ticket-main">
+        <div class="ticket-top">
+          <span class="ticket-cat">${t.category}</span>
+          <span class="ticket-meta">${editable ? t.name+' · ' : ''}${t.submitted}</span>
+        </div>
+        <div class="ticket-desc">${t.description}</div>
+      </div>
+      ${statusControl}
+    </div>`;
+  };
+}
+
+function renderAllTickets(){
+  const el = document.getElementById('allTicketsList');
+  getTickets().then(list=>{
+    if(list.length===0){
+      el.innerHTML = '<div class="empty-state">No tickets yet.</div>';
+      return;
+    }
+    el.innerHTML = list.map(renderTicketRow(true)).join('');
+  });
+}
+
+function updateStatus(id, status){
+  getTickets().then(list=>{
+    const t = list.find(t=>t.id===id);
+    if(t) t.status = status;
+    return saveTickets(list);
+  }).then(renderAllTickets);
+}
+
+function saveSettings(){
+  SETTINGS = {
+    serviceId: document.getElementById('s-service').value.trim(),
+    templateId: document.getElementById('s-template').value.trim(),
+    publicKey: document.getElementById('s-public').value.trim(),
+    notifyEmail: document.getElementById('s-notify').value.trim(),
+    adminPin: document.getElementById('s-pin').value.trim() || '1234'
+  };
+  window.storage.set('settings', JSON.stringify(SETTINGS), true).then(()=>{
+    const msg = document.getElementById('settingsMsg');
+    msg.className = 'form-msg ok';
+    msg.textContent = 'Settings saved.';
+    msg.style.display = 'block';
+  });
+}
+
+loadSettings();
+</script>
+</body>
+</html>
