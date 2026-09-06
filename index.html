@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IT Ticket Desk</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-top">
+    <svg class="mark" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="6" width="28" height="22" rx="2" stroke="#F3F1EC" stroke-width="2"/>
+      <path d="M3 12H31" stroke="#F3F1EC" stroke-width="2"/>
+      <circle cx="9" cy="9" r="1.2" fill="#F3F1EC"/>
+      <circle cx="13" cy="9" r="1.2" fill="#F3F1EC"/>
+    </svg>
+    <div class="brand">IT Ticket Desk <span>/ internal support</span></div>
+  </div>
+  <nav class="status-strip" aria-label="Ticket status summary">
+    <ul>
+      <li><span class="dot open"></span>Open <strong id="count-open">–</strong></li>
+      <li><span class="dot progress"></span>In progress <strong id="count-progress">–</strong></li>
+      <li><span class="dot fixed"></span>Fixed <strong id="count-fixed">–</strong></li>
+    </ul>
+  </nav>
+</header>
+
+<main>
+  <div class="intro">
+    <h1>Tell us what's broken. We'll tell you what's fixed.</h1>
+    <p>Submit a ticket for anything IT-related, or check general fixes to see issues that have already been resolved — your problem might already have an answer.</p>
+  </div>
+
+  <div class="toggle" role="tablist" aria-label="Ticket desk sections">
+    <button role="tab" id="tab-submit" aria-selected="true" aria-controls="panel-submit">Submit a ticket</button>
+    <button role="tab" id="tab-fixes" aria-selected="false" aria-controls="panel-fixes">General fixes</button>
+  </div>
+
+  <section id="panel-submit" class="panel active" role="tabpanel" aria-labelledby="tab-submit">
+    <form class="ticket-form" id="ticket-form">
+      <div class="field">
+        <label for="name">Your name</label>
+        <input type="text" id="name" name="name" required autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="email">Your email</label>
+        <input type="email" id="email" name="email" required autocomplete="email">
+        <div class="hint">We'll only use this if we need more detail on your ticket.</div>
+      </div>
+      <div class="field">
+        <label for="subject">Subject</label>
+        <input type="text" id="subject" name="subject" required placeholder="e.g. Can't connect to the office Wi-Fi">
+      </div>
+      <div class="field">
+        <label for="priority">Priority</label>
+        <select id="priority" name="priority">
+          <option value="low">Low — can wait</option>
+          <option value="normal" selected>Normal</option>
+          <option value="high">High — blocking my work</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="description">What's happening?</label>
+        <textarea id="description" name="description" required placeholder="Steps to reproduce, error messages, when it started..."></textarea>
+      </div>
+      <button type="submit" class="submit-btn" id="submit-btn">Submit ticket</button>
+      <div class="form-msg" id="form-msg"></div>
+    </form>
+  </section>
+
+  <section id="panel-fixes" class="panel" role="tabpanel" aria-labelledby="tab-fixes">
+    <input type="search" class="fix-search" id="fix-search" placeholder="Search resolved issues…">
+    <div id="fix-list" class="fix-list"></div>
+    <div id="fix-empty" class="empty-state" style="display:none;">No resolved tickets match your search yet.</div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <span>Created by <a href="https://example.com" target="_blank" rel="noopener">Rocco Creations</a></span>
+    <a href="admin.html">Admin panel</a>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
