@@ -8,7 +8,7 @@ function getTicketStore(){
   // wiring isn't available inside functions, which throws
   // MissingBlobsEnvironmentError. Passing siteID + token explicitly avoids
   // relying on that automatic detection.
-  const siteID = process.env.NETLIFY_SITE_ID;
+  const siteID = process.env.SITE_ID;
   const token = process.env.NETLIFY_BLOBS_TOKEN;
   if(siteID && token){
     return getStore({ name: STORE_NAME, siteID, token });
