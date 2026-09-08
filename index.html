@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>IT Ticket Desk</title>
+<title id="page-title">IT Ticket Desk</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -16,7 +16,10 @@
       <circle cx="9" cy="9" r="1.2" fill="#F3F1EC"/>
       <circle cx="13" cy="9" r="1.2" fill="#F3F1EC"/>
     </svg>
-    <div class="brand">IT Ticket Desk <span>/ internal support</span></div>
+    <div class="brand"><span id="brand-name">IT Ticket Desk</span> <span data-i18n="tag">/ internal support</span></div>
+    <div class="lang-switch">
+      <select id="lang-select" aria-label="Language"></select>
+    </div>
   </div>
   <nav class="status-strip" aria-label="Ticket status summary">
     <ul>
@@ -29,61 +32,112 @@
 
 <main>
   <div class="intro">
-    <h1>Tell us what's broken. We'll tell you what's fixed.</h1>
-    <p>Submit a ticket for anything IT-related, or check general fixes to see issues that have already been resolved — your problem might already have an answer.</p>
+    <h1 data-i18n="heading">Tell us what's broken. We'll tell you what's fixed.</h1>
+    <p data-i18n="subheading">Submit a ticket for anything IT-related, or check general fixes to see issues that have already been resolved.</p>
   </div>
 
   <div class="toggle" role="tablist" aria-label="Ticket desk sections">
-    <button role="tab" id="tab-submit" aria-selected="true" aria-controls="panel-submit">Submit a ticket</button>
-    <button role="tab" id="tab-fixes" aria-selected="false" aria-controls="panel-fixes">General fixes</button>
+    <button role="tab" id="tab-submit" aria-selected="true" aria-controls="panel-submit" data-i18n="nav_submit">Submit a ticket</button>
+    <button role="tab" id="tab-fixes" aria-selected="false" aria-controls="panel-fixes" data-i18n="nav_fixes">General fixes</button>
+    <button role="tab" id="tab-mytickets" aria-selected="false" aria-controls="panel-mytickets" data-i18n="nav_mytickets">My tickets</button>
   </div>
 
   <section id="panel-submit" class="panel active" role="tabpanel" aria-labelledby="tab-submit">
     <form class="ticket-form" id="ticket-form">
       <div class="field">
-        <label for="name">Your name</label>
+        <label for="name" data-i18n="field_name">Your name</label>
         <input type="text" id="name" name="name" required autocomplete="name">
       </div>
       <div class="field">
-        <label for="email">Your email</label>
+        <label for="email" data-i18n="field_email">Your email</label>
         <input type="email" id="email" name="email" required autocomplete="email">
-        <div class="hint">We'll only use this if we need more detail on your ticket.</div>
       </div>
       <div class="field">
-        <label for="subject">Subject</label>
-        <input type="text" id="subject" name="subject" required placeholder="e.g. Can't connect to the office Wi-Fi">
+        <label for="subject" data-i18n="field_subject">Subject</label>
+        <input type="text" id="subject" name="subject" required list="subject-suggestions" placeholder="e.g. Can't connect to the office Wi-Fi">
+        <datalist id="subject-suggestions">
+          <option value="Can't connect to Wi-Fi">
+          <option value="Printer not working">
+          <option value="Password reset needed">
+          <option value="Software installation request">
+          <option value="Computer running slow">
+          <option value="Email not syncing">
+          <option value="VPN connection issue">
+          <option value="New equipment request">
+        </datalist>
       </div>
       <div class="field">
-        <label for="priority">Priority</label>
+        <label for="category" data-i18n="field_category">Category</label>
+        <select id="category" name="category">
+          <option value="hardware" data-i18n="category_hardware">Hardware</option>
+          <option value="software" data-i18n="category_software">Software</option>
+          <option value="network" data-i18n="category_network">Network</option>
+          <option value="account" data-i18n="category_account">Account / access</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="priority" data-i18n="field_priority">Priority</label>
         <select id="priority" name="priority">
           <option value="low">Low — can wait</option>
           <option value="normal" selected>Normal</option>
           <option value="high">High — blocking my work</option>
         </select>
       </div>
-      <div class="field">
-        <label for="description">What's happening?</label>
-        <textarea id="description" name="description" required placeholder="Steps to reproduce, error messages, when it started..."></textarea>
+      <div class="field field-inline">
+        <input type="checkbox" id="urgent" name="urgent">
+        <label for="urgent" style="margin:0;" data-i18n="field_urgent">This is urgent</label>
       </div>
-      <button type="submit" class="submit-btn" id="submit-btn">Submit ticket</button>
+      <div class="field urgent-reason" id="urgent-reason-wrap">
+        <label for="urgent-reason" data-i18n="field_urgent_reason">Why is this urgent?</label>
+        <textarea id="urgent-reason" name="urgentReason" style="min-height:60px;"></textarea>
+      </div>
+      <div class="field">
+        <label for="description" data-i18n="field_description">What's happening?</label>
+        <textarea id="description" name="description" required maxlength="4000" placeholder="Steps to reproduce, error messages, when it started..."></textarea>
+        <div class="hint"><span id="desc-count">0</span> / 4000</div>
+      </div>
+      <div class="field">
+        <label for="attachment" data-i18n="field_attachment">Attach a screenshot or file (optional)</label>
+        <input type="file" id="attachment" name="attachment" accept="image/*,.pdf,.txt,.log">
+        <div class="attach-preview" id="attach-preview"></div>
+      </div>
+      <button type="submit" class="submit-btn" id="submit-btn" data-i18n="btn_submit">Submit ticket</button>
       <div class="form-msg" id="form-msg"></div>
     </form>
   </section>
 
   <section id="panel-fixes" class="panel" role="tabpanel" aria-labelledby="tab-fixes">
-    <input type="search" class="fix-search" id="fix-search" placeholder="Search resolved issues…">
+    <input type="search" class="fix-search" id="fix-search" data-i18n-placeholder="search_placeholder" placeholder="Search resolved issues…">
     <div id="fix-list" class="fix-list"></div>
     <div id="fix-empty" class="empty-state" style="display:none;">No resolved tickets match your search yet.</div>
+  </section>
+
+  <section id="panel-mytickets" class="panel" role="tabpanel" aria-labelledby="tab-mytickets">
+    <div class="mytickets-box">
+      <h2 data-i18n="mytickets_heading" style="margin:0 0 8px;">Check your tickets</h2>
+      <p data-i18n="mytickets_desc">Enter your email and we'll send you a secure link to view your tickets — no password needed.</p>
+      <form id="mytickets-form">
+        <div class="field">
+          <label for="mytickets-email" data-i18n="mytickets_email_label">Your email</label>
+          <input type="email" id="mytickets-email" required>
+        </div>
+        <button type="submit" class="submit-btn" data-i18n="mytickets_request_btn">Send me a link</button>
+      </form>
+      <div class="form-msg" id="mytickets-msg"></div>
+    </div>
+    <div class="mytickets-list" id="mytickets-list"></div>
   </section>
 </main>
 
 <footer class="site-footer">
   <div class="footer-inner">
-    <span>Created by <a href="https://example.com" target="_blank" rel="noopener">Rocco Creations</a></span>
-    <a href="admin.html">Admin panel</a>
+    <span><span data-i18n="footer_created_by">Created by</span> <a href="https://example.com" target="_blank" rel="noopener">Rocco Creations</a></span>
+    <a href="admin.html" data-i18n="footer_admin">Admin panel</a>
+    <a href="dev.html" data-i18n="footer_dev">Dev login</a>
   </div>
 </footer>
 
+<script src="i18n.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

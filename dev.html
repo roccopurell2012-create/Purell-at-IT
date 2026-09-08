@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Dev — IT Ticket Desk</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <div class="gate-card">
+    <h1>Developer access</h1>
+    <p>Enter the dev access code.</p>
+    <form id="gate-form">
+      <input type="password" inputmode="numeric" id="gate-code" maxlength="12" autocomplete="off" placeholder="••••">
+      <div class="err" id="gate-err"></div>
+      <button type="submit" class="submit-btn" style="width:100%;">Enter</button>
+    </form>
+  </div>
+</div>
+
+<div class="admin-shell" id="admin-shell">
+  <div class="session-banner" id="session-banner" style="display:none;"></div>
+  <header class="admin-header">
+    <div class="admin-header-inner">
+      <h1>Dev panel</h1>
+      <a href="index.html">← Back to site</a>
+    </div>
+  </header>
+  <main class="admin-main">
+
+    <div class="dev-settings">
+      <h2>Site settings</h2>
+      <div class="field">
+        <label for="site-name-input">Website name</label>
+        <input type="text" id="site-name-input" maxlength="100">
+      </div>
+      <div class="save-row">
+        <button class="submit-btn" id="save-site-name">Save</button>
+        <span class="saved-msg" id="saved-msg">Saved</span>
+      </div>
+      <div class="dev-info-grid" id="dev-info"></div>
+    </div>
+
+    <div class="chart-wrap">
+      <h3>Tickets by day (last 7 days)</h3>
+      <div class="bar-chart" id="chart-by-day"></div>
+    </div>
+
+    <div class="admin-filters" id="admin-filters">
+      <button data-filter="all" aria-selected="true">All</button>
+      <button data-filter="open" aria-selected="false">Open</button>
+      <button data-filter="in-progress" aria-selected="false">In progress</button>
+      <button data-filter="fixed" aria-selected="false">Fixed</button>
+    </div>
+    <div id="table-wrap">
+      <div class="loading">Loading tickets…</div>
+    </div>
+  </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card" id="modal-card"></div>
+</div>
+
+<script src="dev.js"></script>
+</body>
+</html>

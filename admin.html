@@ -22,6 +22,7 @@
 </div>
 
 <div class="admin-shell" id="admin-shell">
+  <div class="session-banner" id="session-banner" style="display:none;"></div>
   <header class="admin-header">
     <div class="admin-header-inner">
       <h1>Ticket dashboard</h1>
@@ -29,16 +30,51 @@
     </div>
   </header>
   <main class="admin-main">
-    <div class="admin-filters" id="admin-filters">
-      <button data-filter="all" aria-selected="true">All</button>
-      <button data-filter="open" aria-selected="false">Open</button>
-      <button data-filter="in-progress" aria-selected="false">In progress</button>
-      <button data-filter="fixed" aria-selected="false">Fixed</button>
+
+    <div class="chart-wrap">
+      <h3>Tickets by day (last 7 days)</h3>
+      <div class="bar-chart" id="chart-by-day"></div>
     </div>
+
+    <div id="flagged-wrap"></div>
+
+    <div class="admin-toolbar">
+      <div class="admin-filters" id="admin-filters">
+        <button data-filter="all" aria-selected="true">All</button>
+        <button data-filter="open" aria-selected="false">Open</button>
+        <button data-filter="in-progress" aria-selected="false">In progress</button>
+        <button data-filter="fixed" aria-selected="false">Fixed</button>
+      </div>
+      <div class="admin-toolbar-actions">
+        <select id="category-filter" class="status-select">
+          <option value="">All categories</option>
+          <option value="hardware">Hardware</option>
+          <option value="software">Software</option>
+          <option value="network">Network</option>
+          <option value="account">Account / access</option>
+        </select>
+        <button class="btn-ghost" id="export-csv">Export CSV</button>
+      </div>
+    </div>
+
+    <div class="bulk-bar" id="bulk-bar">
+      <span id="bulk-count">0 selected</span>
+      <select id="bulk-status">
+        <option value="open">Open</option>
+        <option value="in-progress">In progress</option>
+        <option value="fixed">Fixed</option>
+      </select>
+      <button id="bulk-apply">Apply to selected</button>
+    </div>
+
     <div id="table-wrap">
       <div class="loading">Loading tickets…</div>
     </div>
   </main>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card" id="modal-card"></div>
 </div>
 
 <script src="admin.js"></script>
