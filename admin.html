@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — IT Ticket Desk</title>
+<style>
+  :root{
+    --ink:#0f1115;
+    --panel:#12141a;
+    --paper:#f7f7f5;
+    --card:#ffffff;
+    --line:#e3e2dd;
+    --muted:#6b6f76;
+    --red:#e0473e;
+    --amber:#e2a23b;
+    --green:#2fa66a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:var(--panel);
+    color:#fff;
+    padding:22px 24px 18px;
+  }
+  header .title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:20px;
+    font-weight:600;
+  }
+  header .title .icon{
+    width:26px;height:26px;border:2px solid #fff;border-radius:5px;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+  }
+
+  main{max-width:900px;margin:0 auto;padding:36px 20px 80px}
+  h1{font-size:26px;line-height:1.15;margin:0 0 14px}
+  .lede{color:var(--muted);font-size:15px;line-height:1.5;margin:0 0 24px;max-width:60ch}
+
+  section.panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:26px;
+  }
+  .hidden{display:none !important}
+
+  label{display:block;font-weight:600;font-size:14px;margin:0 0 6px}
+  input[type=password]{
+    width:100%;max-width:320px;padding:12px 14px;border:1px solid var(--line);border-radius:9px;
+    font-size:15px;background:#fbfbfa;color:var(--ink);font-family:inherit;
+  }
+  button.primary{
+    background:var(--ink);color:#fff;border:none;border-radius:9px;
+    padding:12px 20px;font-size:15px;font-weight:600;cursor:pointer;margin-top:16px;
+  }
+  button.primary:disabled{opacity:.55;cursor:default}
+  button.primary:hover:not(:disabled){opacity:.9}
+
+  .msg{margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px}
+  .msg.error{background:#fdecea;color:#9b2c22;border:1px solid #f3c6c1}
+  .msg.success{background:#e9f7ef;color:#1e7a49;border:1px solid #bfe6cf}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;gap:10px;flex-wrap:wrap}
+  .toolbar .filters{display:flex;gap:6px;flex-wrap:wrap}
+  .filters button{
+    border:1px solid var(--line);background:#fff;padding:7px 14px;border-radius:999px;
+    font-size:13px;cursor:pointer;color:var(--ink);font-weight:500;
+  }
+  .filters button.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  .ticket-card{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+  .ticket-card .row1{display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap}
+  .ticket-card h4{margin:0;font-size:15px}
+  .ticket-card p{color:var(--muted);font-size:13px;margin:8px 0 0;white-space:pre-wrap}
+  .ticket-meta{color:var(--muted);font-size:12px;margin-top:8px}
+  .ticket-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+  select.status-select{
+    padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;
+    background:#fbfbfa;color:var(--ink);font-family:inherit;
+  }
+  .save-btn{
+    border:1px solid var(--line);background:#fff;padding:8px 14px;border-radius:8px;
+    font-size:13px;cursor:pointer;font-weight:600;
+  }
+  .save-btn:disabled{opacity:.5;cursor:default}
+  .badge{font-size:12px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .badge.open{background:#fdecea;color:#c0392b}
+  .badge.in_progress{background:#fdf3e2;color:#a5730c}
+  .badge.fixed{background:#e9f7ef;color:#1e7a49}
+  a.attachment{font-size:12px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><span class="icon">▣</span> IT Ticket Desk — Admin</div>
+</header>
+
+<main>
+  <div id="gate">
+    <h1>Sign in</h1>
+    <p class="lede">Enter the admin password to view and manage tickets.</p>
+    <section class="panel">
+      <label for="pw">Admin password</label>
+      <input type="password" id="pw">
+      <div><button class="primary" id="pw-btn">Sign in</button></div>
+      <div id="pw-msg"></div>
+    </section>
+  </div>
+
+  <div id="dashboard" class="hidden">
+    <h1>All tickets</h1>
+    <p class="lede">Change a ticket's status and save to update it.</p>
+    <div class="toolbar">
+      <div class="filters">
+        <button data-filter="all" class="active">All</button>
+        <button data-filter="open">Open</button>
+        <button data-filter="in_progress">In progress</button>
+        <button data-filter="fixed">Fixed</button>
+      </div>
+    </div>
+    <div id="tickets-container"></div>
+  </div>
+</main>
+
+<script>
+let adminPassword = '';
+let allTickets = [];
+let activeFilter = 'all';
+
+const gate = document.getElementById('gate');
+const dashboard = document.getElementById('dashboard');
+const pwInput = document.getElementById('pw');
+const pwBtn = document.getElementById('pw-btn');
+const pwMsg = document.getElementById('pw-msg');
+const ticketsContainer = document.getElementById('tickets-container');
+const filterBtns = document.querySelectorAll('.filters button');
+
+function statusLabel(status){
+  if (status === 'in_progress') return 'In progress';
+  if (status === 'fixed') return 'Fixed';
+  return 'Open';
+}
+
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function signIn(){
+  const password = pwInput.value;
+  if (!password) return;
+  pwBtn.disabled = true;
+  pwBtn.textContent = 'Signing in…';
+  pwMsg.innerHTML = '';
+  try {
+    const res = await fetch('/api/admin-tickets', { headers: { 'X-Admin-Password': password } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong');
+    adminPassword = password;
+    sessionStorage.setItem('adminPassword', password);
+    allTickets = data.tickets;
+    gate.classList.add('hidden');
+    dashboard.classList.remove('hidden');
+    render();
+  } catch (err) {
+    pwMsg.innerHTML = `<div class="msg error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    pwBtn.disabled = false;
+    pwBtn.textContent = 'Sign in';
+  }
+}
+
+pwBtn.addEventListener('click', signIn);
+pwInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') signIn(); });
+
+filterBtns.forEach(b => b.addEventListener('click', () => {
+  activeFilter = b.dataset.filter;
+  filterBtns.forEach(x => x.classList.toggle('active', x === b));
+  render();
+}));
+
+function render(){
+  const tickets = activeFilter === 'all' ? allTickets : allTickets.filter(t => t.status === activeFilter);
+  ticketsContainer.innerHTML = '';
+  if (!tickets.length) {
+    ticketsContainer.innerHTML = '<p class="lede">No tickets here.</p>';
+    return;
+  }
+  tickets.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'ticket-card';
+    div.innerHTML = `
+      <div class="row1">
+        <h4>${escapeHtml(t.subject)}</h4>
+        <span class="badge ${t.status}">${statusLabel(t.status)}</span>
+      </div>
+      <p>${escapeHtml(t.message)}</p>
+      <div class="ticket-meta">${escapeHtml(t.name)} (${escapeHtml(t.email)}) · ${escapeHtml(t.category)} · ${escapeHtml(t.priority)}${t.urgent ? ' · Urgent' : ''} · ${new Date(t.createdAt).toLocaleString()}</div>
+      ${t.attachment ? `<div class="ticket-meta"><a class="attachment" href="${t.attachment.dataUrl}" download="${escapeHtml(t.attachment.name)}">Download attachment: ${escapeHtml(t.attachment.name)}</a></div>` : ''}
+      <div class="ticket-actions">
+        <select class="status-select">
+          <option value="open" ${t.status === 'open' ? 'selected' : ''}>Open</option>
+          <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>In progress</option>
+          <option value="fixed" ${t.status === 'fixed' ? 'selected' : ''}>Fixed</option>
+        </select>
+        <button class="save-btn">Save</button>
+        <span class="save-status"></span>
+      </div>
+    `;
+    const select = div.querySelector('.status-select');
+    const saveBtn = div.querySelector('.save-btn');
+    const saveStatus = div.querySelector('.save-status');
+    saveBtn.addEventListener('click', async () => {
+      saveBtn.disabled = true;
+      saveStatus.textContent = 'Saving…';
+      try {
+        const res = await fetch('/api/update-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+          body: JSON.stringify({ id: t.id, status: select.value }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not save');
+        t.status = select.value;
+        saveStatus.textContent = 'Saved';
+        div.querySelector('.badge').className = `badge ${t.status}`;
+        div.querySelector('.badge').textContent = statusLabel(t.status);
+        setTimeout(() => { saveStatus.textContent = ''; }, 1500);
+      } catch (err) {
+        saveStatus.textContent = err.message;
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+    ticketsContainer.appendChild(div);
+  });
+}
+
+// resume a session within this tab if already signed in
+(function init(){
+  const saved = sessionStorage.getItem('adminPassword');
+  if (saved) {
+    pwInput.value = saved;
+    signIn();
+  }
+})();
+</script>
+</body>
+</html>

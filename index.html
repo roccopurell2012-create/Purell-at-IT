@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IT Ticket Desk — internal support</title>
+<style>
+  :root{
+    --ink:#0f1115;
+    --panel:#12141a;
+    --paper:#f7f7f5;
+    --card:#ffffff;
+    --line:#e3e2dd;
+    --muted:#6b6f76;
+    --red:#e0473e;
+    --amber:#e2a23b;
+    --green:#2fa66a;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    background:var(--panel);
+    color:#fff;
+    padding:22px 24px 18px;
+  }
+  header .title{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:20px;
+    font-weight:600;
+  }
+  header .title .icon{
+    width:26px;height:26px;border:2px solid #fff;border-radius:5px;
+    display:flex;align-items:center;justify-content:center;font-size:13px;
+  }
+  .status-row{
+    display:flex;
+    gap:28px;
+    margin-top:16px;
+    font-size:14px;
+    color:#cfd2d8;
+    flex-wrap:wrap;
+  }
+  .status-row span{display:inline-flex;align-items:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .dot.open{background:var(--red)}
+  .dot.progress{background:var(--amber)}
+  .dot.fixed{background:var(--green)}
+
+  main{max-width:760px;margin:0 auto;padding:36px 20px 80px}
+  h1{font-size:32px;line-height:1.15;margin:0 0 14px}
+  .lede{color:var(--muted);font-size:16px;line-height:1.5;margin:0 0 24px;max-width:60ch}
+
+  .tabs{
+    display:inline-flex;
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px;
+    margin-bottom:24px;
+    gap:2px;
+  }
+  .tabs button{
+    border:none;background:transparent;padding:10px 18px;border-radius:999px;
+    font-size:15px;cursor:pointer;color:var(--ink);font-weight:500;
+  }
+  .tabs button.active{background:var(--ink);color:#fff}
+
+  section.panel{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:26px;
+  }
+  .hidden{display:none !important}
+
+  label{display:block;font-weight:600;font-size:14px;margin:16px 0 6px}
+  label:first-of-type{margin-top:0}
+  input[type=text], input[type=email], select, textarea{
+    width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:9px;
+    font-size:15px;background:#fbfbfa;color:var(--ink);font-family:inherit;
+  }
+  textarea{resize:vertical;min-height:110px}
+  .checkbox-row{display:flex;align-items:center;gap:8px;margin:16px 0 4px}
+  .checkbox-row input{width:16px;height:16px}
+  .checkbox-row label{margin:0;font-weight:500}
+  .charcount{color:var(--muted);font-size:12px;margin-top:4px}
+
+  button.primary{
+    background:var(--ink);color:#fff;border:none;border-radius:9px;
+    padding:13px 22px;font-size:15px;font-weight:600;cursor:pointer;margin-top:18px;
+  }
+  button.primary:disabled{opacity:.55;cursor:default}
+  button.primary:hover:not(:disabled){opacity:.9}
+
+  .msg{
+    margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px;
+  }
+  .msg.error{background:#fdecea;color:#9b2c22;border:1px solid #f3c6c1}
+  .msg.success{background:#e9f7ef;color:#1e7a49;border:1px solid #bfe6cf}
+
+  .fix{border-bottom:1px solid var(--line);padding:18px 0}
+  .fix:last-child{border-bottom:none}
+  .fix h3{margin:0 0 6px;font-size:16px}
+  .fix p{margin:0;color:var(--muted);font-size:14px;line-height:1.55}
+
+  .ticket-card{border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:12px}
+  .ticket-card .row1{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .ticket-card h4{margin:0;font-size:15px}
+  .badge{font-size:12px;padding:3px 9px;border-radius:999px;font-weight:600;white-space:nowrap}
+  .badge.open{background:#fdecea;color:#c0392b}
+  .badge.in_progress{background:#fdf3e2;color:#a5730c}
+  .badge.fixed{background:#e9f7ef;color:#1e7a49}
+  .ticket-card p{color:var(--muted);font-size:13px;margin:8px 0 0}
+  .ticket-meta{color:var(--muted);font-size:12px;margin-top:8px}
+
+  footer{text-align:center;color:var(--muted);font-size:13px;padding:24px 0 40px}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title"><span class="icon">▢</span> IT Ticket Desk internal support</div>
+  <div class="status-row">
+    <span><span class="dot open"></span> Open — <span id="count-open">0</span></span>
+    <span><span class="dot progress"></span> In progress — <span id="count-progress">0</span></span>
+    <span><span class="dot fixed"></span> Fixed — <span id="count-fixed">0</span></span>
+  </div>
+</header>
+
+<main>
+  <h1>Tell us what's broken. We'll tell you what's fixed.</h1>
+  <p class="lede">Submit a ticket for anything IT-related, or check general fixes to see issues that have already been resolved.</p>
+
+  <div class="tabs">
+    <button data-tab="submit" class="active">Submit a ticket</button>
+    <button data-tab="fixes">General fixes</button>
+    <button data-tab="mine">My tickets</button>
+  </div>
+
+  <!-- SUBMIT A TICKET -->
+  <section class="panel" id="panel-submit">
+    <form id="ticket-form">
+      <label for="t-name">Your name</label>
+      <input type="text" id="t-name" required>
+
+      <label for="t-email">Your email</label>
+      <input type="email" id="t-email" required>
+
+      <label for="t-subject">Subject</label>
+      <input type="text" id="t-subject" required>
+
+      <label for="t-category">Category</label>
+      <select id="t-category">
+        <option>Hardware</option>
+        <option>Software</option>
+        <option>Network</option>
+        <option>Account &amp; access</option>
+        <option>Other</option>
+      </select>
+
+      <label for="t-priority">Priority</label>
+      <select id="t-priority">
+        <option>Low</option>
+        <option selected>Normal</option>
+        <option>High</option>
+      </select>
+
+      <div class="checkbox-row">
+        <input type="checkbox" id="t-urgent">
+        <label for="t-urgent">This is urgent</label>
+      </div>
+
+      <label>How should we follow up?</label>
+      <div class="checkbox-row">
+        <input type="radio" name="t-contact" id="t-contact-email" value="email" checked>
+        <label for="t-contact-email" style="font-weight:400">By email</label>
+      </div>
+      <div class="checkbox-row">
+        <input type="radio" name="t-contact" id="t-contact-chat" value="chat">
+        <label for="t-contact-chat" style="font-weight:400">In a private chat on this site</label>
+      </div>
+
+      <label for="t-message">What's happening?</label>
+      <textarea id="t-message" maxlength="4000" required></textarea>
+      <div class="charcount"><span id="t-count">0</span> / 4000</div>
+
+      <label for="t-file">Attach a screenshot or file (optional)</label>
+      <input type="file" id="t-file" accept="image/*,.pdf,.txt,.log">
+
+      <button type="submit" class="primary" id="t-submit-btn">Submit ticket</button>
+      <div id="t-msg"></div>
+    </form>
+  </section>
+
+  <!-- GENERAL FIXES -->
+  <section class="panel hidden" id="panel-fixes">
+    <div id="fixes-list"></div>
+  </section>
+
+  <!-- MY TICKETS -->
+  <section class="panel hidden" id="panel-mine">
+    <div id="mine-request">
+      <h3 style="margin-top:0">Check your tickets</h3>
+      <p class="lede" style="margin-bottom:18px">Enter your email and we'll send you a secure link to view your tickets — no password needed.</p>
+      <label for="link-email">Your email</label>
+      <input type="email" id="link-email" required>
+      <button class="primary" id="link-btn">Send me a link</button>
+      <div id="link-msg"></div>
+    </div>
+
+    <div id="mine-list" class="hidden">
+      <h3 style="margin-top:0">Your tickets</h3>
+      <p class="lede" id="mine-email-label" style="margin-bottom:18px"></p>
+      <div id="tickets-container"></div>
+      <button class="primary" id="sign-out-btn" style="background:transparent;color:var(--ink);border:1px solid var(--line)">Sign out</button>
+    </div>
+  </section>
+
+  <footer>Created by Rocco Creations</footer>
+</main>
+
+<script>
+// ---------- tabs ----------
+const tabs = document.querySelectorAll('.tabs button');
+const panels = { submit: document.getElementById('panel-submit'), fixes: document.getElementById('panel-fixes'), mine: document.getElementById('panel-mine') };
+function showTab(name){
+  tabs.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
+  Object.entries(panels).forEach(([k, el]) => el.classList.toggle('hidden', k !== name));
+}
+tabs.forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+
+// ---------- submit a ticket ----------
+const form = document.getElementById('ticket-form');
+const msgEl = document.getElementById('t-msg');
+const submitBtn = document.getElementById('t-submit-btn');
+const messageBox = document.getElementById('t-message');
+const countEl = document.getElementById('t-count');
+messageBox.addEventListener('input', () => { countEl.textContent = messageBox.value.length; });
+
+function fileToDataUrl(file){
+  return new Promise((resolve, reject) => {
+    if (!file) return resolve(null);
+    if (file.size > 3 * 1024 * 1024) return reject(new Error('Attachment must be under 3MB'));
+    const reader = new FileReader();
+    reader.onload = () => resolve({ name: file.name, type: file.type, dataUrl: reader.result });
+    reader.onerror = () => reject(new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msgEl.innerHTML = '';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting…';
+
+  try {
+    const file = document.getElementById('t-file').files[0];
+    const attachment = await fileToDataUrl(file);
+
+    const payload = {
+      name: document.getElementById('t-name').value,
+      email: document.getElementById('t-email').value,
+      subject: document.getElementById('t-subject').value,
+      category: document.getElementById('t-category').value,
+      priority: document.getElementById('t-priority').value,
+      urgent: document.getElementById('t-urgent').checked,
+      contactMethod: document.querySelector('input[name="t-contact"]:checked').value,
+      message: messageBox.value,
+      attachment,
+    };
+
+    const res = await fetch('/api/submit-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Something went wrong submitting your ticket. Please try again.');
+
+    msgEl.innerHTML = payload.contactMethod === 'chat'
+      ? '<div class="msg success">Ticket submitted — check your email for a link to your private chat.</div>'
+      : '<div class="msg success">Ticket submitted — we\'ll follow up by email.</div>';
+    form.reset();
+    countEl.textContent = '0';
+  } catch (err) {
+    msgEl.innerHTML = `<div class="msg error">${err.message || 'Something went wrong submitting your ticket. Please try again.'}</div>`;
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit ticket';
+  }
+});
+
+// ---------- general fixes ----------
+const FIXES = [
+  { title: 'Computer running slow', body: 'Restart it first — this clears memory that background apps have quietly eaten up. If it is still sluggish, check Task Manager (Windows) or Activity Monitor (Mac) for a single process using unusually high CPU, and confirm you have at least 10–15% of your drive free, since a nearly-full disk slows everything down.' },
+  { title: 'Wi-Fi will not connect', body: 'Toggle Wi-Fi off and on, then forget the network and rejoin it so it re-authenticates. If other devices are also struggling, the router likely needs a restart — unplug it for 10 seconds before powering it back on.' },
+  { title: "Can't log in to an account", body: 'Double-check caps lock and any leading/trailing spaces pasted into the password field. Use "Forgot password" to reset if you are still locked out, and confirm the account is not temporarily locked from too many failed attempts.' },
+  { title: 'Printer not printing', body: 'Confirm the printer shows "Ready" and not "Paused" or "Offline" in your system\'s printer settings, then clear the print queue and resend the job. A restart of both the printer and your computer resolves most stuck-queue issues.' },
+  { title: 'Email not syncing', body: 'Check that you have an internet connection, then remove and re-add the email account in your mail app — this forces a fresh sync. If it is a work account, confirm your password has not expired.' },
+  { title: 'App keeps crashing', body: 'Update the app to the latest version first, since most crashes are fixed in a later release. If that does not help, restart your device, and if the crash is tied to one specific file or action, try reproducing it after a fresh restart to see if it is consistent.' },
+  { title: 'Screen frozen or unresponsive', body: 'Give it 30 seconds — background updates can freeze the interface temporarily. If nothing changes, force a restart (hold the power button 10 seconds on most devices), then check Task Manager or Activity Monitor for the culprit app after it comes back.' },
+  { title: 'Forgotten password for a shared tool', body: 'Use the tool\'s own password reset flow tied to your work email rather than asking a colleague — this keeps the account tied to you specifically. If there is no self-service reset, submit a ticket with the tool name and your account email.' },
+];
+const fixesList = document.getElementById('fixes-list');
+FIXES.forEach(f => {
+  const div = document.createElement('div');
+  div.className = 'fix';
+  div.innerHTML = `<h3>${f.title}</h3><p>${f.body}</p>`;
+  fixesList.appendChild(div);
+});
+
+// ---------- my tickets ----------
+const linkEmailInput = document.getElementById('link-email');
+const linkBtn = document.getElementById('link-btn');
+const linkMsg = document.getElementById('link-msg');
+const mineRequest = document.getElementById('mine-request');
+const mineList = document.getElementById('mine-list');
+const ticketsContainer = document.getElementById('tickets-container');
+const mineEmailLabel = document.getElementById('mine-email-label');
+
+linkBtn.addEventListener('click', async () => {
+  const email = linkEmailInput.value.trim();
+  if (!email) return;
+  linkBtn.disabled = true;
+  linkBtn.textContent = 'Sending…';
+  linkMsg.innerHTML = '';
+  try {
+    const res = await fetch('/api/request-link', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not send the link. Please try again.');
+    linkMsg.innerHTML = '<div class="msg success">Check your inbox — we sent you a sign-in link.</div>';
+  } catch (err) {
+    linkMsg.innerHTML = `<div class="msg error">${err.message}</div>`;
+  } finally {
+    linkBtn.disabled = false;
+    linkBtn.textContent = 'Send me a link';
+  }
+});
+
+function statusBadgeClass(status){
+  if (status === 'in_progress') return 'in_progress';
+  if (status === 'fixed') return 'fixed';
+  return 'open';
+}
+function statusLabel(status){
+  if (status === 'in_progress') return 'In progress';
+  if (status === 'fixed') return 'Fixed';
+  return 'Open';
+}
+
+async function loadTickets(sessionToken){
+  const res = await fetch('/api/get-tickets', { headers: { 'X-Session-Token': sessionToken } });
+  const data = await res.json();
+  if (!res.ok) {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('sessionEmail');
+    mineRequest.classList.remove('hidden');
+    mineList.classList.add('hidden');
+    linkMsg.innerHTML = `<div class="msg error">${data.error || 'Your session has expired — request a new link.'}</div>`;
+    return;
+  }
+  mineRequest.classList.add('hidden');
+  mineList.classList.remove('hidden');
+  mineEmailLabel.textContent = `Signed in as ${data.email}`;
+  ticketsContainer.innerHTML = '';
+  updateCounts(data.tickets);
+  if (!data.tickets.length) {
+    ticketsContainer.innerHTML = '<p class="lede">No tickets yet.</p>';
+    return;
+  }
+  data.tickets.forEach(t => {
+    const div = document.createElement('div');
+    div.className = 'ticket-card';
+    div.innerHTML = `
+      <div class="row1">
+        <h4>${escapeHtml(t.subject)}</h4>
+        <span class="badge ${statusBadgeClass(t.status)}">${statusLabel(t.status)}</span>
+      </div>
+      <p>${escapeHtml(t.message)}</p>
+      <div class="ticket-meta">${escapeHtml(t.category)} · ${escapeHtml(t.priority)}${t.urgent ? ' · Urgent' : ''} · ${new Date(t.createdAt).toLocaleString()}</div>
+      ${t.contactMethod === 'chat' ? `<div class="ticket-meta"><a href="/chat.html?ticketId=${encodeURIComponent(t.id)}&session=${encodeURIComponent(sessionToken)}">Open chat</a></div>` : ''}
+    `;
+    ticketsContainer.appendChild(div);
+  });
+}
+
+function updateCounts(tickets){
+  const counts = { open: 0, in_progress: 0, fixed: 0 };
+  tickets.forEach(t => { counts[t.status] = (counts[t.status] || 0) + 1; });
+  document.getElementById('count-open').textContent = counts.open;
+  document.getElementById('count-progress').textContent = counts.in_progress;
+  document.getElementById('count-fixed').textContent = counts.fixed;
+}
+
+document.getElementById('sign-out-btn').addEventListener('click', () => {
+  localStorage.removeItem('sessionToken');
+  localStorage.removeItem('sessionEmail');
+  mineRequest.classList.remove('hidden');
+  mineList.classList.add('hidden');
+  linkEmailInput.value = '';
+});
+
+function escapeHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// on load: handle ?token= from the emailed link, or resume an existing session
+(async function init(){
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get('token');
+
+  if (token) {
+    showTab('mine');
+    linkMsg.innerHTML = '<div class="msg">Signing you in…</div>';
+    try {
+      const res = await fetch(`/api/verify-link?token=${encodeURIComponent(token)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'This link is invalid or has expired.');
+      localStorage.setItem('sessionToken', data.sessionToken);
+      localStorage.setItem('sessionEmail', data.email);
+      history.replaceState({}, '', window.location.pathname); // strip token from the URL
+      linkMsg.innerHTML = '';
+      await loadTickets(data.sessionToken);
+    } catch (err) {
+      linkMsg.innerHTML = `<div class="msg error">${err.message}</div>`;
+    }
+    return;
+  }
+
+  const existingToken = localStorage.getItem('sessionToken');
+  if (existingToken) {
+    await loadTickets(existingToken);
+  }
+})();
+</script>
+</body>
+</html>

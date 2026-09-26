@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chat — IT Ticket Desk</title>
+<style>
+  :root{
+    --ink:#0f1115; --panel:#12141a; --paper:#f7f7f5; --card:#ffffff;
+    --line:#e3e2dd; --muted:#6b6f76;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink)}
+  header{background:var(--panel);color:#fff;padding:22px 24px 18px}
+  header .title{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:600}
+  header .title .icon{width:26px;height:26px;border:2px solid #fff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px}
+  main{max-width:640px;margin:0 auto;padding:36px 20px 60px}
+  h1{font-size:22px;margin:0 0 6px}
+  .lede{color:var(--muted);font-size:14px;margin:0 0 22px}
+  .msg{margin-top:16px;padding:12px 14px;border-radius:9px;font-size:14px}
+  .msg.error{background:#fdecea;color:#9b2c22;border:1px solid #f3c6c1}
+
+  #thread{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;min-height:200px;max-height:55vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  .bubble{max-width:78%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.4;white-space:pre-wrap}
+  .bubble.client{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:4px}
+  .bubble.admin{align-self:flex-start;background:#f0efec;color:var(--ink);border-bottom-left-radius:4px}
+  .bubble-time{font-size:11px;color:var(--muted);margin-top:4px}
+  .empty{color:var(--muted);font-size:14px;text-align:center;margin:auto}
+
+  form#send-form{display:flex;gap:8px;margin-top:14px}
+  textarea#chat-input{flex:1;resize:none;padding:12px 14px;border:1px solid var(--line);border-radius:9px;font-size:14px;font-family:inherit;min-height:44px;max-height:120px}
+  button#send-btn{background:var(--ink);color:#fff;border:none;border-radius:9px;padding:0 20px;font-size:14px;font-weight:600;cursor:pointer}
+  button#send-btn:disabled{opacity:.55;cursor:default}
+</style>
+</head>
+<body>
+
+<header><div class="title"><span class="icon">▣</span> IT Ticket Desk — Chat</div></header>
+
+<main>
+  <div id="loading">Loading…</div>
+
+  <div id="content" class="hidden" style="display:none">
+    <h1 id="ticket-subject"></h1>
+    <p class="lede" id="ticket-meta"></p>
+    <div id="thread"></div>
+    <form id="send-form">
+      <textarea id="chat-input" placeholder="Type a message…" required></textarea>
+      <button type="submit" id="send-btn">Send</button>
+    </form>
+    <div id="send-msg"></div>
+  </div>
+
+  <div id="error-box" class="hidden" style="display:none"></div>
+</main>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const token = params.get('token');
+const loadingEl = document.getElementById('loading');
+const contentEl = document.getElementById('content');
+const errorBox = document.getElementById('error-box');
+const threadEl = document.getElementById('thread');
+const subjectEl = document.getElementById('ticket-subject');
+const metaEl = document.getElementById('ticket-meta');
+const form = document.getElementById('send-form');
+const input = document.getElementById('chat-input');
+const sendBtn = document.getElementById('send-btn');
+const sendMsg = document.getElementById('send-msg');
+
+let ticketId = null;
+let pollTimer = null;
+
+function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function showError(text){
+  loadingEl.style.display = 'none';
+  contentEl.style.display = 'none';
+  errorBox.style.display = 'block';
+  errorBox.innerHTML = `<div class="msg error">${escapeHtml(text)}</div>`;
+}
+
+function renderMessages(messages){
+  threadEl.innerHTML = '';
+  if (!messages.length) {
+    threadEl.innerHTML = '<div class="empty">No messages yet — say hello.</div>';
+    return;
+  }
+  messages.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `bubble ${m.sender}`;
+    div.innerHTML = `${escapeHtml(m.text)}<div class="bubble-time">${new Date(m.createdAt).toLocaleString()}</div>`;
+    threadEl.appendChild(div);
+  });
+  threadEl.scrollTop = threadEl.scrollHeight;
+}
+
+async function load(silent){
+  try {
+    const res = await fetch(`/api/chat-get?ticketId=${encodeURIComponent(ticketId || '')}&token=${encodeURIComponent(token)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load chat');
+    ticketId = data.ticket.id;
+    if (!silent) {
+      subjectEl.textContent = data.ticket.subject;
+      metaEl.textContent = `${data.ticket.category} · ${data.ticket.priority}${data.ticket.urgent ? ' · Urgent' : ''} · Status: ${data.ticket.status === 'in_progress' ? 'In progress' : data.ticket.status === 'fixed' ? 'Fixed' : 'Open'}`;
+      loadingEl.style.display = 'none';
+      contentEl.style.display = 'block';
+    }
+    renderMessages(data.messages);
+  } catch (err) {
+    showError(err.message);
+    if (pollTimer) clearInterval(pollTimer);
+  }
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const text = input.value.trim();
+  if (!text) return;
+  sendBtn.disabled = true;
+  sendMsg.innerHTML = '';
+  try {
+    const res = await fetch('/api/chat-send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ticketId, text, token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not send message');
+    input.value = '';
+    await load(true);
+  } catch (err) {
+    sendMsg.innerHTML = `<div class="msg error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    sendBtn.disabled = false;
+  }
+});
+
+if (!token) {
+  showError('This chat link is missing its token. Use the link from your email.');
+} else {
+  load(false);
+  pollTimer = setInterval(() => load(true), 8000);
+}
+</script>
+</body>
+</html>
