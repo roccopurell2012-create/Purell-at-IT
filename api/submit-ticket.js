@@ -71,24 +71,34 @@ module.exports = async (req, res) => {
       console.warn('ADMIN_EMAIL not set — skipping admin notification email');
     }
 
-    // confirmation email to the client, always sent
+    // confirmation email to the client, always sent — just the ticket summary
     await sendEmail({
       to: cleanEmail,
       subject: `We've got your ticket: ${ticket.subject}`,
       html: `
         <p>Hi ${escapeHtml(ticket.name)},</p>
-        <p>This is a confirmation of the ticket you just submitted:</p>
+        <p>This is what you submitted:</p>
         <p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
         <p><strong>Category:</strong> ${escapeHtml(ticket.category)} &nbsp;•&nbsp; <strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>
         <p style="white-space:pre-wrap">${escapeHtml(ticket.message)}</p>
-        ${
-          chatLink
-            ? `<p>You chose to follow up in a private chat. Open it here:</p><p><a href="${chatLink}">${chatLink}</a></p><p>Keep this email — this link is how you get back into the chat.</p>`
-            : `<p>We'll follow up with you by email at this address.</p>`
-        }
+        ${chatLink ? '' : `<p>We'll follow up with you by email at this address.</p>`}
         <p style="color:#888;font-size:12px">Ticket ID: ${id}</p>
       `,
     });
+
+    // separate email with the private chat link, only when that was chosen
+    if (chatLink) {
+      await sendEmail({
+        to: cleanEmail,
+        subject: `Your private chat link — ${ticket.subject}`,
+        html: `
+          <p>Hi ${escapeHtml(ticket.name)},</p>
+          <p>You chose to follow up in a private chat on the site. Here's your link:</p>
+          <p><a href="${chatLink}">${chatLink}</a></p>
+          <p>Keep this email — this link is how you get back into the chat.</p>
+        `,
+      });
+    }
 
     return res.status(200).json({ ok: true, id });
   } catch (err) {
