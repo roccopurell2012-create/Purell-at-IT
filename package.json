@@ -1,0 +1,9 @@
+{
+  "name": "it-ticket-desk",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Internal IT ticket desk — submit tickets, browse general fixes, and view your ticket history via a passwordless email link.",
+  "dependencies": {
+    "@vercel/kv": "^2.0.0"
+  }
+}
