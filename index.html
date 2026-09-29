@@ -91,6 +91,14 @@
   .checkbox-row input{width:16px;height:16px}
   .checkbox-row label{margin:0;font-weight:500}
   .charcount{color:var(--muted);font-size:12px;margin-top:4px}
+  .field-hint{color:var(--muted);font-size:12px;margin:4px 0 0;line-height:1.45}
+  #r-dynamic .req-group{
+    border-top:1px solid var(--line);margin-top:22px;padding-top:6px;
+  }
+  #r-dynamic .req-intro{color:var(--muted);font-size:13.5px;line-height:1.5;margin:14px 0 2px}
+  .cbx-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;margin-top:8px}
+  @media (max-width:520px){ .cbx-grid{grid-template-columns:1fr} }
+  .cbx-grid .checkbox-row{margin:6px 0}
 
   button.primary{
     background:var(--ink);color:#fff;border:none;border-radius:9px;
@@ -119,6 +127,9 @@
   .badge.fixed{background:#e9f7ef;color:#1e7a49}
   .ticket-card p{color:var(--muted);font-size:13px;margin:8px 0 0}
   .ticket-meta{color:var(--muted);font-size:12px;margin-top:8px}
+  .details-table{border-collapse:collapse;margin:10px 0 2px;font-size:13px;width:100%}
+  .details-table .dt-k{padding:3px 14px 3px 0;color:var(--muted);vertical-align:top;white-space:nowrap;font-weight:600}
+  .details-table .dt-v{padding:3px 0;color:var(--ink)}
 
   footer{text-align:center;color:var(--muted);font-size:13px;padding:24px 0 40px}
 </style>
@@ -140,6 +151,7 @@
 
   <div class="tabs">
     <button data-tab="submit" class="active">Submit a ticket</button>
+    <button data-tab="request">Request something</button>
     <button data-tab="fixes">General fixes</button>
     <button data-tab="mine">My tickets</button>
   </div>
@@ -199,6 +211,60 @@
     </form>
   </section>
 
+  <!-- REQUEST SOMETHING -->
+  <section class="panel hidden" id="panel-request">
+    <h3 style="margin-top:0">Request something from IT</h3>
+    <p class="lede" style="margin-bottom:20px">Need a charger, a new account, a device, a software update or something else? Pick what you need below and we'll fill in the right questions for you.</p>
+    <form id="request-form">
+      <label for="r-type">What do you need?</label>
+      <select id="r-type">
+        <option value="" disabled selected>Choose a request type…</option>
+      </select>
+
+      <!-- per-type fields are rendered in here -->
+      <div id="r-dynamic"></div>
+
+      <div id="r-common" class="hidden">
+        <label for="r-name">Your name</label>
+        <input type="text" id="r-name" required>
+
+        <label for="r-email">Your email</label>
+        <input type="email" id="r-email" required>
+
+        <label for="r-needed">Needed by (optional)</label>
+        <input type="text" id="r-needed" placeholder="e.g. end of next week, or a date">
+
+        <label for="r-priority">Priority</label>
+        <select id="r-priority">
+          <option>Low</option>
+          <option selected>Normal</option>
+          <option>High</option>
+        </select>
+
+        <div class="checkbox-row">
+          <input type="checkbox" id="r-urgent">
+          <label for="r-urgent">This is urgent</label>
+        </div>
+
+        <label>How should we follow up?</label>
+        <div class="checkbox-row">
+          <input type="radio" name="r-contact" id="r-contact-email" value="email" checked>
+          <label for="r-contact-email" style="font-weight:400">By email</label>
+        </div>
+        <div class="checkbox-row">
+          <input type="radio" name="r-contact" id="r-contact-chat" value="chat">
+          <label for="r-contact-chat" style="font-weight:400">In a private chat on this site</label>
+        </div>
+
+        <label for="r-notes">Anything else we should know? (optional)</label>
+        <textarea id="r-notes" maxlength="4000" style="min-height:80px"></textarea>
+
+        <button type="submit" class="primary" id="r-submit-btn">Send request</button>
+        <div id="r-msg"></div>
+      </div>
+    </form>
+  </section>
+
   <!-- GENERAL FIXES -->
   <section class="panel hidden" id="panel-fixes">
     <div id="fixes-list"></div>
@@ -229,7 +295,7 @@
 <script>
 // ---------- tabs ----------
 const tabs = document.querySelectorAll('.tabs button');
-const panels = { submit: document.getElementById('panel-submit'), fixes: document.getElementById('panel-fixes'), mine: document.getElementById('panel-mine') };
+const panels = { submit: document.getElementById('panel-submit'), request: document.getElementById('panel-request'), fixes: document.getElementById('panel-fixes'), mine: document.getElementById('panel-mine') };
 function showTab(name){
   tabs.forEach(b => b.classList.toggle('active', b.dataset.tab === name));
   Object.entries(panels).forEach(([k, el]) => el.classList.toggle('hidden', k !== name));
@@ -296,6 +362,387 @@ form.addEventListener('submit', async (e) => {
   } finally {
     submitBtn.disabled = false;
     submitBtn.textContent = 'Submit ticket';
+  }
+});
+
+// ---------- request something ----------
+// Each request type defines the category it files under and the tailored
+// questions it asks. Field kinds: 'text', 'textarea', 'select', 'checkgrid'.
+// Entries with a `heading` render a labelled divider instead of a field.
+// `primary: true` marks the field whose value is used in the subject line.
+// Add a new request type by adding an entry here — nothing else to change.
+const REQUEST_TYPES = [
+  {
+    id: 'charger',
+    label: 'Charger / cable',
+    category: 'Hardware',
+    fields: [
+      { heading: 'The plug block', intro: 'The part that goes into the wall socket.' },
+      { id: 'block_needed', label: 'Do you need the wall plug block?', kind: 'select',
+        options: ['No — I only need a cable', 'Yes — I need the plug block too'] },
+      { id: 'block_type', label: 'Which plug block?', kind: 'select', options: [
+        'USB-C power adapter — phone / tablet (about 20–30W)',
+        'USB-C fast charger — laptop (45–100W)',
+        'USB-A power adapter — older type',
+        'Laptop charger — barrel / pin type',
+        'Microsoft Surface Connect charger',
+        'Not sure — please advise' ],
+        hint: 'Only needed if you asked for a plug block above.' },
+      { heading: 'The cable', intro: 'Which cable ends do you need? "Old USB" (the flat rectangular plug) is USB-A; Micro-USB is the small older Samsung/Android type.' },
+      { id: 'cable_needed', label: 'Do you need a cable?', kind: 'select',
+        options: ['Yes', 'No — plug block only'] },
+      { id: 'cable_type', label: 'Which cable?', kind: 'select', options: [
+        'USB-A to USB-C  (old USB → USB-C)',
+        'USB-C to USB-C',
+        'USB-A to Micro-USB  (older Samsung / Android)',
+        'USB-C to Micro-USB',
+        'USB-A to Lightning  (Apple)',
+        'USB-C to Lightning  (Apple, fast)',
+        'USB-A to Mini-USB  (older cameras / devices)',
+        'USB-A to USB-B  (printers)',
+        'Microsoft Surface Connect cable',
+        'Not sure — described in notes' ] },
+      { id: 'device_for', label: 'Which device is it for?', kind: 'text', primary: true, placeholder: 'e.g. Samsung A54, iPhone 13, Dell laptop' },
+      { id: 'quantity', label: 'How many?', kind: 'text', placeholder: '1' },
+    ],
+  },
+  {
+    id: 'account',
+    label: 'New account',
+    category: 'Account & access',
+    fields: [
+      { intro: "Everything IT needs to create the account. Fill in what you know — we'll chase the rest." },
+      { id: 'person_name', label: 'Full name of the person', kind: 'text', required: true, primary: true },
+      { id: 'preferred_username', label: 'Preferred username / email address', kind: 'text', placeholder: 'e.g. jan.botha@…' },
+      { id: 'department', label: 'Department', kind: 'text' },
+      { id: 'job_title', label: 'Job title / role', kind: 'text' },
+      { id: 'start_date', label: 'Start date', kind: 'text', placeholder: 'e.g. 1 October' },
+      { id: 'manager', label: 'Manager / approver', kind: 'text' },
+      { id: 'access', label: 'Accounts & access needed', kind: 'checkgrid', options: [
+        'Email mailbox', 'Wi-Fi login', 'Shared drive / files', 'Accounting system',
+        'Point-of-sale (POS)', 'Fuel / forecourt system', 'Building / CCTV access',
+        'Printer access', 'Other (see notes)' ] },
+      { id: 'phone_ext', label: 'Phone extension / mobile (if any)', kind: 'text' },
+    ],
+  },
+  {
+    id: 'device',
+    label: 'New device / equipment',
+    category: 'Hardware',
+    fields: [
+      { id: 'device_type', label: 'What device?', kind: 'select', required: true, primary: true, options: [
+        'Laptop', 'Desktop PC', 'Monitor', 'Mobile phone', 'Tablet', 'Printer',
+        'Point-of-sale (POS) terminal', 'Router / network gear', 'Other (see notes)' ] },
+      { id: 'device_for', label: 'Who is it for?', kind: 'text' },
+      { id: 'purpose', label: 'What will it be used for?', kind: 'text' },
+      { id: 'spec', label: 'Preferred make / model or spec (if any)', kind: 'text' },
+      { id: 'budget', label: 'Approximate budget (optional)', kind: 'text', placeholder: 'e.g. R12 000' },
+    ],
+  },
+  {
+    id: 'software',
+    label: 'New software / app',
+    category: 'Software',
+    fields: [
+      { id: 'software_name', label: 'Software / app name', kind: 'text', required: true, primary: true },
+      { id: 'device_for', label: 'Which device(s)?', kind: 'text' },
+      { id: 'licence', label: 'Licence needed?', kind: 'select', options: ['Not sure', 'Yes — paid licence', 'No — it’s free'] },
+      { id: 'reason', label: 'What do you need it for?', kind: 'text' },
+    ],
+  },
+  {
+    id: 'update',
+    label: 'Software update',
+    category: 'Software',
+    fields: [
+      { id: 'software_name', label: 'Which software / app needs updating?', kind: 'text', required: true, primary: true },
+      { id: 'device_for', label: 'Which device?', kind: 'text' },
+      { id: 'current_version', label: 'Current version (if known)', kind: 'text' },
+      { id: 'reason', label: "What's prompting the update?", kind: 'select', options: [
+        "It's out of date", 'A feature I need', 'Security / IT asked me to',
+        "Something's not working", 'Other (see notes)' ] },
+    ],
+  },
+  {
+    id: 'access',
+    label: 'Access / permissions',
+    category: 'Account & access',
+    fields: [
+      { id: 'system', label: 'Which system or resource?', kind: 'text', required: true, primary: true,
+        placeholder: 'e.g. accounting system, a shared folder' },
+      { id: 'level', label: 'Access level needed', kind: 'select', options: ['View only', 'Edit', 'Admin', 'Not sure'] },
+      { id: 'reason', label: 'Why do you need it?', kind: 'text' },
+      { id: 'approver', label: 'Manager / approver', kind: 'text' },
+    ],
+  },
+  {
+    id: 'alexa',
+    label: 'Alexa / smart device',
+    category: 'Hardware',
+    fields: [
+      { id: 'device', label: 'Which device?', kind: 'select', required: true, primary: true, options: [
+        'Amazon Echo Dot', 'Amazon Echo', 'Amazon Echo Show (with screen)',
+        'Google Nest', 'Other smart speaker (see notes)' ] },
+      { id: 'location', label: 'Where will it go?', kind: 'text', placeholder: 'e.g. front counter, office' },
+      { id: 'purpose', label: 'What should it do?', kind: 'text', placeholder: 'e.g. music, timers, announcements' },
+      { id: 'wifi', label: 'Which Wi-Fi should it use?', kind: 'text' },
+    ],
+  },
+  {
+    id: 'peripheral',
+    label: 'Accessory / peripheral',
+    category: 'Hardware',
+    fields: [
+      { id: 'items', label: 'What do you need?', kind: 'checkgrid', primary: true, options: [
+        'Mouse', 'Keyboard', 'Headset', 'Webcam', 'Monitor', 'Docking station',
+        'USB hub', 'Adapter / dongle', 'Laptop bag', 'Other (see notes)' ] },
+      { id: 'wired_wireless', label: 'Wired or wireless?', kind: 'select', options: ['No preference', 'Wired', 'Wireless'] },
+      { id: 'device_for', label: 'Which device is it for?', kind: 'text' },
+    ],
+  },
+  {
+    id: 'mobile',
+    label: 'Mobile / SIM / data',
+    category: 'Hardware',
+    fields: [
+      { id: 'need', label: 'What do you need?', kind: 'select', required: true, primary: true, options: [
+        'New SIM card', 'Data bundle', 'New mobile phone', 'Airtime', 'Number port', 'Other (see notes)' ] },
+      { id: 'provider', label: 'Network / provider (if any)', kind: 'text', placeholder: 'e.g. Vodacom, MTN' },
+      { id: 'whose', label: 'Whose phone / number?', kind: 'text' },
+    ],
+  },
+  {
+    id: 'other',
+    label: 'Something else',
+    category: 'Other',
+    fields: [
+      { id: 'what', label: 'What do you need?', kind: 'text', required: true, primary: true,
+        placeholder: 'A short summary — add detail in the notes below' },
+    ],
+  },
+];
+
+const rTypeSelect = document.getElementById('r-type');
+const rDynamic = document.getElementById('r-dynamic');
+const rCommon = document.getElementById('r-common');
+const rForm = document.getElementById('request-form');
+const rMsg = document.getElementById('r-msg');
+const rSubmitBtn = document.getElementById('r-submit-btn');
+let activeReqType = null;
+
+REQUEST_TYPES.forEach(t => {
+  const opt = document.createElement('option');
+  opt.value = t.id;
+  opt.textContent = t.label;
+  rTypeSelect.appendChild(opt);
+});
+
+function slugId(typeId, fieldId){ return `rf-${typeId}-${fieldId}`; }
+
+function renderRequestFields(type){
+  rDynamic.innerHTML = '';
+  type.fields.forEach(f => {
+    if (f.heading || f.intro && !f.id) {
+      const wrap = document.createElement('div');
+      if (f.heading) {
+        wrap.className = 'req-group';
+        const h = document.createElement('label');
+        h.textContent = f.heading;
+        h.style.marginTop = '10px';
+        wrap.appendChild(h);
+      }
+      if (f.intro) {
+        const p = document.createElement('p');
+        p.className = 'req-intro';
+        p.textContent = f.intro;
+        wrap.appendChild(p);
+      }
+      rDynamic.appendChild(wrap);
+      return;
+    }
+
+    const id = slugId(type.id, f.id);
+
+    if (f.kind === 'checkgrid') {
+      const lab = document.createElement('label');
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      rDynamic.appendChild(lab);
+      const grid = document.createElement('div');
+      grid.className = 'cbx-grid';
+      grid.dataset.field = id;
+      f.options.forEach((optText, i) => {
+        const row = document.createElement('div');
+        row.className = 'checkbox-row';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = `${id}-${i}`;
+        cb.value = optText;
+        const cl = document.createElement('label');
+        cl.setAttribute('for', `${id}-${i}`);
+        cl.textContent = optText;
+        row.appendChild(cb); row.appendChild(cl);
+        grid.appendChild(row);
+      });
+      rDynamic.appendChild(grid);
+    } else if (f.kind === 'select') {
+      const lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      rDynamic.appendChild(lab);
+      const sel = document.createElement('select');
+      sel.id = id;
+      const blank = document.createElement('option');
+      blank.value = ''; blank.textContent = 'Choose…';
+      if (!f.required) blank.selected = true;
+      sel.appendChild(blank);
+      f.options.forEach(o => {
+        const op = document.createElement('option');
+        op.value = o; op.textContent = o;
+        sel.appendChild(op);
+      });
+      rDynamic.appendChild(sel);
+    } else if (f.kind === 'textarea') {
+      const lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      rDynamic.appendChild(lab);
+      const ta = document.createElement('textarea');
+      ta.id = id; ta.style.minHeight = '70px';
+      if (f.placeholder) ta.placeholder = f.placeholder;
+      rDynamic.appendChild(ta);
+    } else { // text
+      const lab = document.createElement('label');
+      lab.setAttribute('for', id);
+      lab.textContent = f.label + (f.required ? ' *' : '');
+      rDynamic.appendChild(lab);
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.id = id;
+      if (f.placeholder) inp.placeholder = f.placeholder;
+      rDynamic.appendChild(inp);
+    }
+
+    if (f.hint) {
+      const hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.textContent = f.hint;
+      rDynamic.appendChild(hint);
+    }
+  });
+}
+
+rTypeSelect.addEventListener('change', () => {
+  activeReqType = REQUEST_TYPES.find(t => t.id === rTypeSelect.value) || null;
+  if (!activeReqType) { rDynamic.innerHTML = ''; rCommon.classList.add('hidden'); return; }
+  renderRequestFields(activeReqType);
+  rCommon.classList.remove('hidden');
+  rMsg.innerHTML = '';
+});
+
+function collectRequestDetails(type){
+  const details = {};
+  let primaryValue = '';
+  type.fields.forEach(f => {
+    if (!f.id) return;
+    const id = slugId(type.id, f.id);
+    let value = '';
+    if (f.kind === 'checkgrid') {
+      const grid = rDynamic.querySelector(`[data-field="${id}"]`);
+      const checked = grid ? [...grid.querySelectorAll('input:checked')].map(c => c.value) : [];
+      value = checked.join(', ');
+    } else {
+      const el = document.getElementById(id);
+      value = el ? el.value.trim() : '';
+    }
+    if (value) details[f.label.replace(/\s*\*$/, '')] = value;
+    if (f.primary && value) primaryValue = value;
+  });
+  return { details, primaryValue };
+}
+
+rForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  rMsg.innerHTML = '';
+  if (!activeReqType) {
+    rMsg.innerHTML = '<div class="msg error">Please choose a request type first.</div>';
+    return;
+  }
+
+  const name = document.getElementById('r-name').value.trim();
+  const email = document.getElementById('r-email').value.trim();
+  if (!name || !email) {
+    rMsg.innerHTML = '<div class="msg error">Please fill in your name and email.</div>';
+    return;
+  }
+
+  // check required per-type fields
+  const missing = [];
+  activeReqType.fields.forEach(f => {
+    if (!f.id || !f.required) return;
+    const id = slugId(activeReqType.id, f.id);
+    let v = '';
+    if (f.kind === 'checkgrid') {
+      const grid = rDynamic.querySelector(`[data-field="${id}"]`);
+      v = grid && grid.querySelector('input:checked') ? 'x' : '';
+    } else {
+      const el = document.getElementById(id);
+      v = el ? el.value.trim() : '';
+    }
+    if (!v) missing.push(f.label.replace(/\s*\*$/, ''));
+  });
+  if (missing.length) {
+    rMsg.innerHTML = `<div class="msg error">Please fill in: ${escapeHtml(missing.join(', '))}.</div>`;
+    return;
+  }
+
+  const { details, primaryValue } = collectRequestDetails(activeReqType);
+  const neededBy = document.getElementById('r-needed').value.trim();
+  const notes = document.getElementById('r-notes').value.trim();
+  if (neededBy) details['Needed by'] = neededBy;
+
+  const subject = primaryValue
+    ? `${activeReqType.label} — ${primaryValue}`
+    : activeReqType.label;
+
+  // Build a readable message body so the request reads well even where only
+  // the message is shown; the structured details are also sent separately.
+  const lines = Object.entries(details).map(([k, v]) => `${k}: ${v}`);
+  if (notes) lines.push(`\nNotes: ${notes}`);
+  const message = `Request type: ${activeReqType.label}\n\n${lines.join('\n')}`.trim();
+
+  rSubmitBtn.disabled = true;
+  rSubmitBtn.textContent = 'Sending…';
+  try {
+    const payload = {
+      name, email, subject,
+      category: activeReqType.category,
+      priority: document.getElementById('r-priority').value,
+      urgent: document.getElementById('r-urgent').checked,
+      contactMethod: document.querySelector('input[name="r-contact"]:checked').value,
+      message,
+      kind: 'request',
+      requestType: activeReqType.label,
+      details,
+    };
+    const res = await fetch('/api/submit-ticket', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Something went wrong sending your request. Please try again.');
+
+    rMsg.innerHTML = payload.contactMethod === 'chat'
+      ? '<div class="msg success">Request sent — check your email for a link to your private chat.</div>'
+      : '<div class="msg success">Request sent — we\'ll follow up by email.</div>';
+    rForm.reset();
+    rDynamic.innerHTML = '';
+    rCommon.classList.add('hidden');
+    activeReqType = null;
+  } catch (err) {
+    rMsg.innerHTML = `<div class="msg error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    rSubmitBtn.disabled = false;
+    rSubmitBtn.textContent = 'Send request';
   }
 });
 
@@ -384,12 +831,20 @@ async function loadTickets(sessionToken){
   data.tickets.forEach(t => {
     const div = document.createElement('div');
     div.className = 'ticket-card';
+    const isRequest = t.kind === 'request';
+    const kindTag = isRequest
+      ? `<span class="badge" style="background:#eef0f5;color:#3a4a6b">Request${t.requestType ? ' · ' + escapeHtml(t.requestType) : ''}</span> `
+      : '';
+    const body = (isRequest && t.details)
+      ? detailsTable(t.details)
+      : `<p>${escapeHtml(t.message)}</p>`;
     div.innerHTML = `
       <div class="row1">
         <h4>${escapeHtml(t.subject)}</h4>
         <span class="badge ${statusBadgeClass(t.status)}">${statusLabel(t.status)}</span>
       </div>
-      <p>${escapeHtml(t.message)}</p>
+      <div style="margin-top:6px">${kindTag}</div>
+      ${body}
       <div class="ticket-meta">${escapeHtml(t.category)} · ${escapeHtml(t.priority)}${t.urgent ? ' · Urgent' : ''} · ${new Date(t.createdAt).toLocaleString()}</div>
       ${t.contactMethod === 'chat' ? `<div class="ticket-meta"><a href="/chat.html?ticketId=${encodeURIComponent(t.id)}&session=${encodeURIComponent(sessionToken)}">Open chat</a></div>` : ''}
     `;
@@ -415,6 +870,14 @@ document.getElementById('sign-out-btn').addEventListener('click', () => {
 
 function escapeHtml(str){
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// renders a request's structured detail fields as a compact key/value table
+function detailsTable(details){
+  const rows = Object.entries(details || {})
+    .map(([k, v]) => `<tr><td class="dt-k">${escapeHtml(k)}</td><td class="dt-v">${escapeHtml(v)}</td></tr>`)
+    .join('');
+  return rows ? `<table class="details-table">${rows}</table>` : '';
 }
 
 // on load: handle ?token= from the emailed link, or resume an existing session

@@ -95,7 +95,13 @@
   .badge.open{background:#fdecea;color:#c0392b}
   .badge.in_progress{background:#fdf3e2;color:#a5730c}
   .badge.fixed{background:#e9f7ef;color:#1e7a49}
+  .badge.kind-request{background:#eef0f5;color:#3a4a6b}
+  .badge.kind-ticket{background:#f0efe9;color:#6b5d3a}
   a.attachment{font-size:12px}
+  .details-table{border-collapse:collapse;margin:10px 0 2px;font-size:13px;width:100%}
+  .details-table .dt-k{padding:3px 14px 3px 0;color:var(--muted);vertical-align:top;white-space:nowrap;font-weight:600}
+  .details-table .dt-v{padding:3px 0;color:var(--ink);white-space:pre-wrap}
+  .filters .sep{width:1px;background:var(--line);margin:2px 4px}
 </style>
 </head>
 <body>
@@ -117,14 +123,17 @@
   </div>
 
   <div id="dashboard" class="hidden">
-    <h1>All tickets</h1>
-    <p class="lede">Change a ticket's status and save to update it.</p>
+    <h1>All tickets &amp; requests</h1>
+    <p class="lede">Change an item's status and save to update it. Use the Tickets / Requests filters to see one kind at a time.</p>
     <div class="toolbar">
       <div class="filters">
         <button data-filter="all" class="active">All</button>
         <button data-filter="open">Open</button>
         <button data-filter="in_progress">In progress</button>
         <button data-filter="fixed">Fixed</button>
+        <span class="sep"></span>
+        <button data-filter="tickets">Tickets</button>
+        <button data-filter="requests">Requests</button>
       </div>
     </div>
     <div id="tickets-container"></div>
@@ -187,22 +196,38 @@ filterBtns.forEach(b => b.addEventListener('click', () => {
   render();
 }));
 
+function detailsTable(details){
+  const rows = Object.entries(details || {})
+    .map(([k, v]) => `<tr><td class="dt-k">${escapeHtml(k)}</td><td class="dt-v">${escapeHtml(v)}</td></tr>`)
+    .join('');
+  return rows ? `<table class="details-table">${rows}</table>` : '';
+}
+
 function render(){
-  const tickets = activeFilter === 'all' ? allTickets : allTickets.filter(t => t.status === activeFilter);
+  let tickets = allTickets;
+  if (activeFilter === 'requests') tickets = allTickets.filter(t => t.kind === 'request');
+  else if (activeFilter === 'tickets') tickets = allTickets.filter(t => t.kind !== 'request');
+  else if (activeFilter !== 'all') tickets = allTickets.filter(t => t.status === activeFilter);
   ticketsContainer.innerHTML = '';
   if (!tickets.length) {
-    ticketsContainer.innerHTML = '<p class="lede">No tickets here.</p>';
+    ticketsContainer.innerHTML = '<p class="lede">Nothing here.</p>';
     return;
   }
   tickets.forEach(t => {
     const div = document.createElement('div');
     div.className = 'ticket-card';
+    const isRequest = t.kind === 'request';
+    const kindBadge = isRequest
+      ? `<span class="badge kind-request">Request${t.requestType ? ' · ' + escapeHtml(t.requestType) : ''}</span>`
+      : `<span class="badge kind-ticket">Ticket</span>`;
+    const body = (isRequest && t.details) ? detailsTable(t.details) : `<p>${escapeHtml(t.message)}</p>`;
     div.innerHTML = `
       <div class="row1">
         <h4>${escapeHtml(t.subject)}</h4>
         <span class="badge ${t.status}">${statusLabel(t.status)}</span>
       </div>
-      <p>${escapeHtml(t.message)}</p>
+      <div style="margin-top:6px">${kindBadge}</div>
+      ${body}
       <div class="ticket-meta">${escapeHtml(t.name)} (${escapeHtml(t.email)}) · ${escapeHtml(t.category)} · ${escapeHtml(t.priority)}${t.urgent ? ' · Urgent' : ''} · ${new Date(t.createdAt).toLocaleString()}</div>
       ${t.attachment ? `<div class="ticket-meta"><a class="attachment" href="${t.attachment.dataUrl}" download="${escapeHtml(t.attachment.name)}">Download attachment: ${escapeHtml(t.attachment.name)}</a></div>` : ''}
       <div class="ticket-actions">
