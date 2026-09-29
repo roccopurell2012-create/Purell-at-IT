@@ -6,7 +6,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { name, email, subject, category, priority, urgent, message, attachment, contactMethod } = req.body || {};
+  const { name, email, subject, category, priority, urgent, message, attachment, contactMethod, kind, requestType, details } = req.body || {};
 
   if (!name || !email || !subject || !message) {
     return res.status(400).json({ error: 'Name, email, subject and message are required' });
@@ -16,6 +16,20 @@ module.exports = async (req, res) => {
     const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const cleanEmail = String(email).toLowerCase().trim();
     const cleanContactMethod = contactMethod === 'chat' ? 'chat' : 'email';
+    // "ticket" (something is broken) or "request" (asking for equipment/access/etc.)
+    const cleanKind = kind === 'request' ? 'request' : 'ticket';
+
+    // Keep only the filled-in detail fields, capped and stringified so the store
+    // and the emails stay tidy regardless of what the form sends.
+    let cleanDetails = null;
+    if (cleanKind === 'request' && details && typeof details === 'object') {
+      cleanDetails = {};
+      for (const [k, v] of Object.entries(details)) {
+        if (v === null || v === undefined || v === '' || v === false) continue;
+        cleanDetails[String(k).slice(0, 60)] = String(v).slice(0, 500);
+      }
+      if (Object.keys(cleanDetails).length === 0) cleanDetails = null;
+    }
 
     const ticket = {
       id,
@@ -29,6 +43,9 @@ module.exports = async (req, res) => {
       attachment: attachment || null,
       status: 'open',
       contactMethod: cleanContactMethod,
+      kind: cleanKind,
+      requestType: cleanKind === 'request' && requestType ? String(requestType).slice(0, 80) : null,
+      details: cleanDetails,
       createdAt: new Date().toISOString(),
     };
 
@@ -53,36 +70,52 @@ module.exports = async (req, res) => {
       chatLink = `${siteUrl(req)}/chat.html?token=${chatToken}`;
     }
 
+    // Render the structured request detail fields as an HTML list for the emails.
+    const detailsHtml = ticket.details
+      ? `<table style="border-collapse:collapse;font-size:14px;margin:4px 0">${Object.entries(ticket.details)
+          .map(([k, v]) => `<tr><td style="padding:2px 12px 2px 0;color:#555;vertical-align:top"><strong>${escapeHtml(k)}</strong></td><td style="padding:2px 0">${escapeHtml(v)}</td></tr>`)
+          .join('')}</table>`
+      : '';
+
+    const noun = ticket.kind === 'request' ? 'request' : 'ticket';
+    const typeLine = ticket.kind === 'request' && ticket.requestType
+      ? `<p><strong>Request type:</strong> ${escapeHtml(ticket.requestType)}</p>`
+      : '';
+
     const adminEmail = process.env.ADMIN_EMAIL;
     if (adminEmail) {
       await sendEmail({
         to: adminEmail,
-        subject: `New ticket: ${ticket.subject}${ticket.urgent ? ' (URGENT)' : ''}`,
+        subject: `New ${noun}: ${ticket.subject}${ticket.urgent ? ' (URGENT)' : ''}`,
         html: `
           <p><strong>From:</strong> ${escapeHtml(ticket.name)} (${escapeHtml(ticket.email)})</p>
+          ${typeLine}
           <p><strong>Category:</strong> ${escapeHtml(ticket.category)} &nbsp;•&nbsp; <strong>Priority:</strong> ${escapeHtml(ticket.priority)}${ticket.urgent ? ' &nbsp;•&nbsp; <strong style="color:#c0392b">URGENT</strong>' : ''}</p>
           <p><strong>Follow-up:</strong> ${cleanContactMethod === 'chat' ? 'Private chat on the site' : 'Email'}</p>
           <p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
           <p style="white-space:pre-wrap">${escapeHtml(ticket.message)}</p>
-          <p style="color:#888;font-size:12px">Ticket ID: ${id}</p>
+          ${detailsHtml}
+          <p style="color:#888;font-size:12px">${ticket.kind === 'request' ? 'Request' : 'Ticket'} ID: ${id}</p>
         `,
       });
     } else {
       console.warn('ADMIN_EMAIL not set — skipping admin notification email');
     }
 
-    // confirmation email to the client, always sent — just the ticket summary
+    // confirmation email to the client, always sent — just the ticket/request summary
     await sendEmail({
       to: cleanEmail,
-      subject: `We've got your ticket: ${ticket.subject}`,
+      subject: `We've got your ${noun}: ${ticket.subject}`,
       html: `
         <p>Hi ${escapeHtml(ticket.name)},</p>
         <p>This is what you submitted:</p>
+        ${typeLine}
         <p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
         <p><strong>Category:</strong> ${escapeHtml(ticket.category)} &nbsp;•&nbsp; <strong>Priority:</strong> ${escapeHtml(ticket.priority)}</p>
         <p style="white-space:pre-wrap">${escapeHtml(ticket.message)}</p>
+        ${detailsHtml}
         ${chatLink ? '' : `<p>We'll follow up with you by email at this address.</p>`}
-        <p style="color:#888;font-size:12px">Ticket ID: ${id}</p>
+        <p style="color:#888;font-size:12px">${ticket.kind === 'request' ? 'Request' : 'Ticket'} ID: ${id}</p>
       `,
     });
 
