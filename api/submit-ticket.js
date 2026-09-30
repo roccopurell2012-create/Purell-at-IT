@@ -95,6 +95,7 @@ module.exports = async (req, res) => {
           <p><strong>Subject:</strong> ${escapeHtml(ticket.subject)}</p>
           <p style="white-space:pre-wrap">${escapeHtml(ticket.message)}</p>
           ${detailsHtml}
+          ${chatLink ? `<p><strong>Chat link:</strong> <a href="${chatLink}">${chatLink}</a></p>` : ''}
           <p style="color:#888;font-size:12px">${ticket.kind === 'request' ? 'Request' : 'Ticket'} ID: ${id}</p>
         `,
       });
