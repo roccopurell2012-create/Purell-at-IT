@@ -95,6 +95,8 @@
   .badge.open{background:#fdecea;color:#c0392b}
   .badge.in_progress{background:#fdf3e2;color:#a5730c}
   .badge.fixed{background:#e9f7ef;color:#1e7a49}
+  .badge.approved{background:#e9f7ef;color:#1e7a49}
+  .badge.denied{background:#fdecea;color:#c0392b}
   .badge.kind-request{background:#eef0f5;color:#3a4a6b}
   .badge.kind-ticket{background:#f0efe9;color:#6b5d3a}
   a.attachment{font-size:12px}
@@ -102,6 +104,15 @@
   .details-table .dt-k{padding:3px 14px 3px 0;color:var(--muted);vertical-align:top;white-space:nowrap;font-weight:600}
   .details-table .dt-v{padding:3px 0;color:var(--ink);white-space:pre-wrap}
   .filters .sep{width:1px;background:var(--line);margin:2px 4px}
+  .delete-btn{border:1px solid #f3c6c1;background:#fff;color:#9b2c22;padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600}
+  .delete-btn:disabled{opacity:.5;cursor:default}
+  .top-tabs{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:4px;margin-bottom:22px;gap:2px}
+  .top-tabs button{border:none;background:transparent;padding:9px 16px;border-radius:999px;font-size:14px;cursor:pointer;color:var(--ink);font-weight:500}
+  .top-tabs button.active{background:var(--ink);color:#fff}
+  .fix-row{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+  .fix-row input[type=text]{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:8px;font-family:inherit}
+  .fix-row textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;min-height:80px;resize:vertical}
+  .fix-row .fix-row-actions{margin-top:8px;display:flex;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -123,20 +134,38 @@
   </div>
 
   <div id="dashboard" class="hidden">
-    <h1>All tickets &amp; requests</h1>
-    <p class="lede">Change an item's status and save to update it. Use the Tickets / Requests filters to see one kind at a time.</p>
-    <div class="toolbar">
-      <div class="filters">
-        <button data-filter="all" class="active">All</button>
-        <button data-filter="open">Open</button>
-        <button data-filter="in_progress">In progress</button>
-        <button data-filter="fixed">Fixed</button>
-        <span class="sep"></span>
-        <button data-filter="tickets">Tickets</button>
-        <button data-filter="requests">Requests</button>
-      </div>
+    <div class="top-tabs">
+      <button data-admintab="items" class="active">Tickets &amp; requests</button>
+      <button data-admintab="fixes">General fixes</button>
     </div>
-    <div id="tickets-container"></div>
+
+    <div id="admintab-items">
+      <h1>All tickets &amp; requests</h1>
+      <p class="lede">Change an item's status and save to update it. Requests can be approved or denied — the client gets an email either way. Use the Tickets / Requests filters to see one kind at a time.</p>
+      <div class="toolbar">
+        <div class="filters">
+          <button data-filter="all" class="active">All</button>
+          <button data-filter="open">Open</button>
+          <button data-filter="in_progress">In progress</button>
+          <button data-filter="fixed">Fixed</button>
+          <span class="sep"></span>
+          <button data-filter="tickets">Tickets</button>
+          <button data-filter="requests">Requests</button>
+        </div>
+      </div>
+      <div id="tickets-container"></div>
+    </div>
+
+    <div id="admintab-fixes" class="hidden">
+      <h1>General fixes</h1>
+      <p class="lede">These show up on the public "General fixes" tab. Edit, remove, or add new ones, then save.</p>
+      <div id="fixes-editor"></div>
+      <button class="save-btn" id="fix-add-btn" type="button">+ Add a fix</button>
+      <div style="margin-top:18px">
+        <button class="primary" id="fixes-save-btn">Save all changes</button>
+      </div>
+      <div id="fixes-msg"></div>
+    </div>
   </div>
 </main>
 
@@ -156,6 +185,8 @@ const filterBtns = document.querySelectorAll('.filters button');
 function statusLabel(status){
   if (status === 'in_progress') return 'In progress';
   if (status === 'fixed') return 'Fixed';
+  if (status === 'approved') return 'Approved';
+  if (status === 'denied') return 'Denied';
   return 'Open';
 }
 
@@ -235,13 +266,17 @@ function render(){
           <option value="open" ${t.status === 'open' ? 'selected' : ''}>Open</option>
           <option value="in_progress" ${t.status === 'in_progress' ? 'selected' : ''}>In progress</option>
           <option value="fixed" ${t.status === 'fixed' ? 'selected' : ''}>Fixed</option>
+          ${isRequest ? `<option value="approved" ${t.status === 'approved' ? 'selected' : ''}>Approved</option>` : ''}
+          ${isRequest ? `<option value="denied" ${t.status === 'denied' ? 'selected' : ''}>Denied</option>` : ''}
         </select>
         <button class="save-btn">Save</button>
+        <button class="delete-btn" type="button">Delete</button>
         <span class="save-status"></span>
       </div>
     `;
     const select = div.querySelector('.status-select');
     const saveBtn = div.querySelector('.save-btn');
+    const deleteBtn = div.querySelector('.delete-btn');
     const saveStatus = div.querySelector('.save-status');
     saveBtn.addEventListener('click', async () => {
       saveBtn.disabled = true;
@@ -255,19 +290,123 @@ function render(){
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Could not save');
         t.status = select.value;
-        saveStatus.textContent = 'Saved';
+        saveStatus.textContent = (select.value === 'approved' || select.value === 'denied') ? 'Saved — client emailed' : 'Saved';
         div.querySelector('.badge').className = `badge ${t.status}`;
         div.querySelector('.badge').textContent = statusLabel(t.status);
-        setTimeout(() => { saveStatus.textContent = ''; }, 1500);
+        setTimeout(() => { saveStatus.textContent = ''; }, 2000);
       } catch (err) {
         saveStatus.textContent = err.message;
       } finally {
         saveBtn.disabled = false;
       }
     });
+    deleteBtn.addEventListener('click', async () => {
+      const kindWord = isRequest ? 'request' : 'ticket';
+      if (!confirm(`Delete this ${kindWord} permanently? This can't be undone.`)) return;
+      deleteBtn.disabled = true;
+      saveStatus.textContent = 'Deleting…';
+      try {
+        const res = await fetch('/api/delete-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+          body: JSON.stringify({ id: t.id }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Could not delete');
+        allTickets = allTickets.filter(x => x.id !== t.id);
+        render();
+      } catch (err) {
+        saveStatus.textContent = err.message;
+        deleteBtn.disabled = false;
+      }
+    });
     ticketsContainer.appendChild(div);
   });
 }
+
+// ---------- top tabs (items vs fixes) ----------
+const adminTabBtns = document.querySelectorAll('.top-tabs button');
+const adminTabItems = document.getElementById('admintab-items');
+const adminTabFixes = document.getElementById('admintab-fixes');
+let fixesLoaded = false;
+
+adminTabBtns.forEach(b => b.addEventListener('click', async () => {
+  adminTabBtns.forEach(x => x.classList.toggle('active', x === b));
+  const tab = b.dataset.admintab;
+  adminTabItems.classList.toggle('hidden', tab !== 'items');
+  adminTabFixes.classList.toggle('hidden', tab !== 'fixes');
+  if (tab === 'fixes' && !fixesLoaded) {
+    await loadFixes();
+  }
+}));
+
+// ---------- general fixes editor ----------
+const fixesEditor = document.getElementById('fixes-editor');
+const fixesMsg = document.getElementById('fixes-msg');
+const fixesSaveBtn = document.getElementById('fixes-save-btn');
+const fixAddBtn = document.getElementById('fix-add-btn');
+let currentFixes = [];
+
+function renderFixesEditor(){
+  fixesEditor.innerHTML = '';
+  currentFixes.forEach((f, i) => {
+    const row = document.createElement('div');
+    row.className = 'fix-row';
+    row.innerHTML = `
+      <input type="text" class="fix-title" placeholder="Title" value="${escapeHtml(f.title)}">
+      <textarea class="fix-body" placeholder="What to do">${escapeHtml(f.body)}</textarea>
+      <div class="fix-row-actions"><button type="button" class="delete-btn">Remove</button></div>
+    `;
+    row.querySelector('.fix-title').addEventListener('input', (e) => { currentFixes[i].title = e.target.value; });
+    row.querySelector('.fix-body').addEventListener('input', (e) => { currentFixes[i].body = e.target.value; });
+    row.querySelector('.delete-btn').addEventListener('click', () => {
+      currentFixes.splice(i, 1);
+      renderFixesEditor();
+    });
+    fixesEditor.appendChild(row);
+  });
+}
+
+async function loadFixes(){
+  fixesMsg.innerHTML = '';
+  fixesEditor.innerHTML = '<p class="lede">Loading…</p>';
+  try {
+    const res = await fetch('/api/admin-fixes', { headers: { 'X-Admin-Password': adminPassword } });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load fixes');
+    currentFixes = data.fixes || [];
+    fixesLoaded = true;
+    renderFixesEditor();
+  } catch (err) {
+    fixesEditor.innerHTML = `<div class="msg error">${escapeHtml(err.message)}</div>`;
+  }
+}
+
+fixAddBtn.addEventListener('click', () => {
+  currentFixes.push({ title: '', body: '' });
+  renderFixesEditor();
+});
+
+fixesSaveBtn.addEventListener('click', async () => {
+  fixesSaveBtn.disabled = true;
+  fixesMsg.innerHTML = '';
+  try {
+    const res = await fetch('/api/admin-fixes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Password': adminPassword },
+      body: JSON.stringify({ fixes: currentFixes }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not save');
+    currentFixes = data.fixes || currentFixes;
+    renderFixesEditor();
+    fixesMsg.innerHTML = '<div class="msg success">Saved — the public page now shows these.</div>';
+  } catch (err) {
+    fixesMsg.innerHTML = `<div class="msg error">${escapeHtml(err.message)}</div>`;
+  } finally {
+    fixesSaveBtn.disabled = false;
+  }
+});
 
 // resume a session within this tab if already signed in
 (function init(){

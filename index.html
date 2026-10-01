@@ -125,6 +125,8 @@
   .badge.open{background:#fdecea;color:#c0392b}
   .badge.in_progress{background:#fdf3e2;color:#a5730c}
   .badge.fixed{background:#e9f7ef;color:#1e7a49}
+  .badge.approved{background:#e9f7ef;color:#1e7a49}
+  .badge.denied{background:#fdecea;color:#c0392b}
   .ticket-card p{color:var(--muted);font-size:13px;margin:8px 0 0}
   .ticket-meta{color:var(--muted);font-size:12px;margin-top:8px}
   .details-table{border-collapse:collapse;margin:10px 0 2px;font-size:13px;width:100%}
@@ -747,23 +749,28 @@ rForm.addEventListener('submit', async (e) => {
 });
 
 // ---------- general fixes ----------
-const FIXES = [
-  { title: 'Computer running slow', body: 'Restart it first — this clears memory that background apps have quietly eaten up. If it is still sluggish, check Task Manager (Windows) or Activity Monitor (Mac) for a single process using unusually high CPU, and confirm you have at least 10–15% of your drive free, since a nearly-full disk slows everything down.' },
-  { title: 'Wi-Fi will not connect', body: 'Toggle Wi-Fi off and on, then forget the network and rejoin it so it re-authenticates. If other devices are also struggling, the router likely needs a restart — unplug it for 10 seconds before powering it back on.' },
-  { title: "Can't log in to an account", body: 'Double-check caps lock and any leading/trailing spaces pasted into the password field. Use "Forgot password" to reset if you are still locked out, and confirm the account is not temporarily locked from too many failed attempts.' },
-  { title: 'Printer not printing', body: 'Confirm the printer shows "Ready" and not "Paused" or "Offline" in your system\'s printer settings, then clear the print queue and resend the job. A restart of both the printer and your computer resolves most stuck-queue issues.' },
-  { title: 'Email not syncing', body: 'Check that you have an internet connection, then remove and re-add the email account in your mail app — this forces a fresh sync. If it is a work account, confirm your password has not expired.' },
-  { title: 'App keeps crashing', body: 'Update the app to the latest version first, since most crashes are fixed in a later release. If that does not help, restart your device, and if the crash is tied to one specific file or action, try reproducing it after a fresh restart to see if it is consistent.' },
-  { title: 'Screen frozen or unresponsive', body: 'Give it 30 seconds — background updates can freeze the interface temporarily. If nothing changes, force a restart (hold the power button 10 seconds on most devices), then check Task Manager or Activity Monitor for the culprit app after it comes back.' },
-  { title: 'Forgotten password for a shared tool', body: 'Use the tool\'s own password reset flow tied to your work email rather than asking a colleague — this keeps the account tied to you specifically. If there is no self-service reset, submit a ticket with the tool name and your account email.' },
-];
 const fixesList = document.getElementById('fixes-list');
-FIXES.forEach(f => {
-  const div = document.createElement('div');
-  div.className = 'fix';
-  div.innerHTML = `<h3>${f.title}</h3><p>${f.body}</p>`;
-  fixesList.appendChild(div);
-});
+async function loadFixes(){
+  try {
+    const res = await fetch('/api/get-fixes');
+    const data = await res.json();
+    const fixes = (data && data.fixes) || [];
+    fixesList.innerHTML = '';
+    if (!fixes.length) {
+      fixesList.innerHTML = '<p class="lede">No fixes listed yet.</p>';
+      return;
+    }
+    fixes.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'fix';
+      div.innerHTML = `<h3>${escapeHtml(f.title)}</h3><p>${escapeHtml(f.body)}</p>`;
+      fixesList.appendChild(div);
+    });
+  } catch (err) {
+    fixesList.innerHTML = '<p class="lede">Could not load fixes right now.</p>';
+  }
+}
+loadFixes();
 
 // ---------- my tickets ----------
 const linkEmailInput = document.getElementById('link-email');
@@ -800,11 +807,15 @@ linkBtn.addEventListener('click', async () => {
 function statusBadgeClass(status){
   if (status === 'in_progress') return 'in_progress';
   if (status === 'fixed') return 'fixed';
+  if (status === 'approved') return 'approved';
+  if (status === 'denied') return 'denied';
   return 'open';
 }
 function statusLabel(status){
   if (status === 'in_progress') return 'In progress';
   if (status === 'fixed') return 'Fixed';
+  if (status === 'approved') return 'Approved';
+  if (status === 'denied') return 'Denied';
   return 'Open';
 }
 
